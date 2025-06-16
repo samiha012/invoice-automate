@@ -432,32 +432,11 @@
                             <div class="charge-description">Customer experience service fee</div>
                         </label>
                     </div>
-                    <div class="charge-item" data-charge="processing">
+                    <div class="charge-item" data-charge="exam">
                         <label>
-                            <input type="checkbox" id="processingCharge" class="charge-checkbox" value="1.5">
-                            <span class="charge-label">Processing Fee (1.5%)</span>
-                            <div class="charge-description">Payment processing charges</div>
-                        </label>
-                    </div>
-                    <div class="charge-item" data-charge="delivery">
-                        <label>
-                            <input type="checkbox" id="deliveryCharge" class="charge-checkbox" value="3">
-                            <span class="charge-label">Delivery Charge (3%)</span>
-                            <div class="charge-description">Shipping and handling fees</div>
-                        </label>
-                    </div>
-                    <div class="charge-item" data-charge="handling">
-                        <label>
-                            <input type="checkbox" id="handlingCharge" class="charge-checkbox" value="1">
-                            <span class="charge-label">Handling Fee (1%)</span>
-                            <div class="charge-description">Product handling charges</div>
-                        </label>
-                    </div>
-                    <div class="charge-item" data-charge="insurance">
-                        <label>
-                            <input type="checkbox" id="insuranceCharge" class="charge-checkbox" value="0.5">
-                            <span class="charge-label">Insurance (0.5%)</span>
-                            <div class="charge-description">Product insurance coverage</div>
+                            <input type="checkbox" id="examCharge" class="charge-checkbox" value="100">
+                            <span class="charge-label">Exam App (100tk per unique user)</span>
+                            <div class="charge-description">Exam App Charge - 100 taka per unique user</div>
                         </label>
                     </div>
                 </div>
@@ -514,6 +493,61 @@
         let totalRevenue = 0;
         let totalProducts = 0;
         let fileCount = 0;
+        let totalUniqueUsersGlobal = 0;
+        let allUniqueUsers = new Set();
+
+        // Common utility functions
+        function getSelectedCharges() {
+            const selectedCharges = [];
+            document.querySelectorAll('.charge-checkbox:checked').forEach(checkbox => {
+                const label = checkbox.nextElementSibling.textContent;
+                const value = parseFloat(checkbox.value);
+                const chargeType = checkbox.closest('.charge-item').dataset.charge;
+                selectedCharges.push({ label, value, type: chargeType });
+            });
+            return selectedCharges;
+        }
+
+        function calculateChargesTotal(selectedCharges, revenue, uniqueUsers) {
+            return selectedCharges.reduce((total, charge) => {
+                if (charge.type === 'exam') {
+                    return total + (uniqueUsers * charge.value);
+                }
+                return total + (revenue * charge.value / 100);
+            }, 0);
+        }
+
+        function getClientInfo() {
+            return {
+                name: document.getElementById('clientName').value || 'Client Company Name',
+                address: document.getElementById('clientAddress').value || 'Client Address Line 1',
+                project: document.getElementById('projectName').value || 'Course Name',
+                course: document.getElementById('courseName').value || 'Course Name'
+            };
+        }
+
+        function formatDateRange(fileName) {
+            const dateRange = extractDateRangeFromFileName(fileName);
+            if (!dateRange) return { start: '', end: '' };
+            return {
+                start: `From: ${dateRange.from}`,
+                end: `To: ${dateRange.to}`
+            };
+        }
+
+        function formatProductName(productName, courseName) {
+            if (!courseName || courseName.trim() === '' || courseName === 'Course Name') {
+                return productName;
+            }
+
+            if (productName.toLowerCase().includes('cycle')) {
+                const cycleMatch = productName.match(/cycle[\s-]*(\d+)/i);
+                if (cycleMatch) {
+                    return `${courseName} Cycle ${cycleMatch[1]}`;
+                }
+            }
+            return productName.replace(/^[^-]*/, courseName);
+        }
 
         // File upload handling
         const fileUploadArea = document.getElementById('fileUploadArea');
@@ -597,11 +631,30 @@
                         console.log('Headers found:', headers);
                         console.log('Sample data:', objectData.slice(0, 2));
 
-                        const fileData = extractSalesData(objectData, file.name);
-                        salesData.push(...fileData);
+                        const result = extractSalesData(objectData, file.name);
+
+                        // Add unique users from this file to global set
+                        // You'll need to modify extractSalesData to also return the unique user emails
+                        // Or collect them here from the raw data
+
+                        // Collect unique users from this file
+                        const emailKeys = headers.filter(key => key.toLowerCase().includes('email'));
+                        if (emailKeys.length > 0) {
+                            objectData.forEach(row => {
+                                const email = row[emailKeys[0]];
+                                if (email) {
+                                    allUniqueUsers.add(email.toLowerCase().trim());
+                                }
+                            });
+                        }
+
+                        // Update global count
+                        totalUniqueUsersGlobal = allUniqueUsers.size;
+
+                        salesData.push(...result.extractedData);
                         fileCount++;
 
-                        const detailedInfo = `${fileData.length} records extracted. Columns: ${headers.join(', ')}`;
+                        const detailedInfo = `${result.extractedData.length} records extracted. File unique users: ${result.totalUniqueUsers}. Global unique users so far: ${totalUniqueUsersGlobal}. Columns: ${headers.join(', ')}`;
                         showFileUploadSuccess(file.name, detailedInfo);
                         resolve();
                     } catch (error) {
@@ -624,10 +677,14 @@
             // Group data by Cycle and Amount
             const groupedData = {};
 
-            jsonData.slice(1).forEach((row, index) => {
-                // Extract cycle and amount from the row
+            // Track unique users locally for this file
+            const fileUniqueUsers = new Set();
+
+            jsonData.forEach((row, index) => {
+                // Extract cycle, amount, and email from the row
                 let cycle = '';
                 let amount = 0;
+                let email = '';
 
                 // Find cycle column (case insensitive)
                 const cycleKeys = Object.keys(row).filter(key =>
@@ -639,6 +696,11 @@
                     key.toLowerCase().includes('amount')
                 );
 
+                // Find email column (case insensitive)
+                const emailKeys = Object.keys(row).filter(key =>
+                    key.toLowerCase().includes('email')
+                );
+
                 if (cycleKeys.length > 0) {
                     cycle = row[cycleKeys[0]] || '';
                 }
@@ -647,8 +709,15 @@
                     amount = parseFloat(row[amountKeys[0]]) || 0;
                 }
 
-                // Skip if no valid cycle or amount
-                if (!cycle || amount <= 0) return;
+                if (emailKeys.length > 0) {
+                    email = row[emailKeys[0]] || '';
+                }
+
+                // Skip if no valid cycle, amount, or email
+                if (!cycle || amount <= 0 || !email) return;
+
+                // Add to file's unique users set
+                fileUniqueUsers.add(email.toLowerCase().trim());
 
                 // Create grouping key
                 const key = `${cycle}_${amount}`;
@@ -662,6 +731,7 @@
                     };
                 }
 
+                // Simply increment count for each transaction
                 groupedData[key].count += 1;
                 groupedData[key].totalAmount += amount;
             });
@@ -690,7 +760,12 @@
                 return b.price - a.price;
             });
 
-            return extractedData;
+            // Return both extracted data and unique user count for this file
+            return {
+                extractedData: extractedData,
+                totalUniqueUsers: fileUniqueUsers.size,
+                uniqueUserEmails: Array.from(fileUniqueUsers)
+            };
         }
 
         function extractDateRangeFromFileName(fileName) {
@@ -765,18 +840,8 @@
         function generateInvoicePreview() {
             if (salesData.length === 0) return;
 
-            const selectedCharges = [];
-            document.querySelectorAll('.charge-checkbox:checked').forEach(checkbox => {
-                const label = checkbox.nextElementSibling.textContent;
-                const percentage = parseFloat(checkbox.value);
-                selectedCharges.push({ label, percentage });
-            });
-
-            let chargesTotal = 0;
-            selectedCharges.forEach(charge => {
-                chargesTotal += (totalRevenue * charge.percentage / 100);
-            });
-
+            const selectedCharges = getSelectedCharges();
+            const chargesTotal = calculateChargesTotal(selectedCharges, totalRevenue, totalUniqueUsersGlobal);
             const finalTotal = Math.ceil(totalRevenue - chargesTotal);
 
             const invoiceHTML = `
@@ -829,12 +894,17 @@
                         <span>Subtotal:</span>
                         <span>৳${totalRevenue}</span>
                     </div>
-                    ${selectedCharges.map(charge => `
-                        <div class="total-row">
-                            <span>${charge.label}:</span>
-                            <span>৳${(totalRevenue * charge.percentage / 100)}</span>
-                        </div>
-                    `).join('')}
+                    ${selectedCharges.map(charge => {
+                        const chargeAmount = charge.type === 'exam' 
+                            ? totalUniqueUsersGlobal * charge.value 
+                            : totalRevenue * charge.value / 100;
+                        return `
+                            <div class="total-row">
+                                <span>${charge.label}:</span>
+                                <span>৳${chargeAmount.toLocaleString()}</span>
+                            </div>
+                        `;
+                    }).join('')}
                     <div class="total-row final">
                         <span>TOTAL:</span>
                         <span>৳${finalTotal}</span>
@@ -846,41 +916,15 @@
             document.getElementById('invoiceSection').style.display = 'block';
         }
 
-
         // PDF generation
-
-        const generateBtn = document.getElementById('generatePdfBtn');
-        if (!document.getElementById('clientName')) {
-            generateBtn.insertAdjacentHTML('beforebegin', clientInputsHTML);
-        }
-
-        //Professional PDF generation
         document.getElementById('generatePdfBtn').addEventListener('click', function () {
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
 
-            // Get client information from input fields
-            const dateRange = extractDateRangeFromFileName(salesData[0]?.fileName || '');
-            const startDate = dateRange ? `From: ${dateRange.from}` : '';
-            const endDate = dateRange ? `To: ${dateRange.to}` : '';
-
-            const clientName = document.getElementById('clientName').value || 'Client Company Name';
-            const clientAddress = document.getElementById('clientAddress').value || 'Client Address Line 1';
-            const projectName = document.getElementById('projectName').value || 'Course Name';
-            const courseName = document.getElementById('courseName').value || 'Course Name';
-
-            // Selected charges
-            const selectedCharges = [];
-            document.querySelectorAll('.charge-checkbox:checked').forEach(checkbox => {
-                const label = checkbox.nextElementSibling.textContent;
-                const percentage = parseFloat(checkbox.value);
-                selectedCharges.push({ label, percentage });
-            });
-
-            let chargesTotal = 0;
-            selectedCharges.forEach(charge => {
-                chargesTotal += (totalRevenue * charge.percentage / 100);
-            });
+            const clientInfo = getClientInfo();
+            const dateRange = formatDateRange(salesData[0]?.fileName || '');
+            const selectedCharges = getSelectedCharges();
+            const chargesTotal = calculateChargesTotal(selectedCharges, totalRevenue, totalUniqueUsersGlobal);
             const finalTotal = Math.ceil(totalRevenue - chargesTotal);
 
             const pageWidth = pdf.internal.pageSize.getWidth();
@@ -935,11 +979,11 @@
             pdf.setFontSize(10);
             pdf.setFont(undefined, 'normal');
             yPos += 7;
-            pdf.text(clientName, 15, yPos);
+            pdf.text(clientInfo.name, 15, yPos);
             yPos += 6;
-            pdf.text(clientAddress, 15, yPos);
+            pdf.text(clientInfo.address, 15, yPos);
             yPos += 6;
-            pdf.text(`Project: ${projectName}`, 15, yPos);
+            pdf.text(`Project: ${clientInfo.project}`, 15, yPos);
 
             // Service Period section - positioned on the right
             pdf.setTextColor(...primaryColor);
@@ -950,8 +994,8 @@
             pdf.setTextColor(...black);
             pdf.setFontSize(10);
             pdf.setFont(undefined, 'normal');
-            pdf.text(startDate, 120, 52);
-            pdf.text(endDate, 120, 58);
+            pdf.text(dateRange.start, 120, 52);
+            pdf.text(dateRange.end, 120, 58);
 
             // Add horizontal line after client section
             pdf.setDrawColor(230, 230, 230);
@@ -1013,17 +1057,8 @@
 
                 // Format product name with course name and cycle
                 let productName = item.productName;
-                if (courseName && courseName.trim() !== '' && courseName !== 'Course Name') {
-                    // Replace generic names with course name + cycle format
-                    if (productName.toLowerCase().includes('cycle')) {
-                        const cycleMatch = productName.match(/cycle[\s-]*(\d+)/i);
-                        if (cycleMatch) {
-                            productName = `${courseName} Cycle ${cycleMatch[1]}`;
-                        }
-                    } else {
-                        // If no cycle mentioned, just use the course name
-                        productName = productName.replace(/^[^-]*/, courseName);
-                    }
+                if (clientInfo.course && clientInfo.course.trim() !== '' && clientInfo.course !== 'Course Name') {
+                    productName = formatProductName(productName, clientInfo.course);
                 }
 
                 // Truncate long product names
@@ -1039,15 +1074,36 @@
                 rowCounter++;
             });
 
+            // Add total products row
+            if (yPos > 250) {
+                pdf.addPage();
+                yPos = 30;
+            }
+            
+            // Add a light gray background for the total row
+            pdf.setFillColor(240, 240, 240);
+            pdf.rect(20, yPos - 3, pageWidth - 40, 8, 'F');
+            
+            // Make the text bold for the total row
+            pdf.setFont(undefined, 'bold');
+            pdf.text('Total Products Sold:', 25, yPos + 2);
+            pdf.text(totalProducts.toString(), 120, yPos + 2, { align: 'center' });
+            pdf.text('-', 140, yPos + 2, { align: 'center' });
+            pdf.text('-', 170, yPos + 2, { align: 'center' });
+            
+            // Reset font to normal for the rest of the document
+            pdf.setFont(undefined, 'normal');
+            yPos += 12;  // Add extra space after the total row
+
             // Totals section
             yPos += 10;
-            const totalsX = 120;
-            const valuesX = 170;
+            const totalsX = 90;
+            const valuesX = 180;
 
             // Separator line
             pdf.setDrawColor(...darkGray);
             pdf.setLineWidth(0.5);
-            pdf.line(totalsX, yPos, pageWidth - 20, yPos);
+            pdf.line(totalsX - 5, yPos, valuesX + 10, yPos);
             yPos += 8;
 
             // Subtotal
@@ -1059,15 +1115,24 @@
 
             // Additional charges
             selectedCharges.forEach(charge => {
+                let chargeAmount;
+                if (charge.type === 'exam') {
+                    // Exam charge: fixed amount per unique user
+                    chargeAmount = totalUniqueUsersGlobal * charge.value;
+                } else {
+                    // Percentage-based charges (tax, service, etc.)
+                    chargeAmount = totalRevenue * charge.value / 100;
+                }
+
                 pdf.text(`${charge.label}:`, totalsX, yPos);
-                pdf.text(`${(totalRevenue * charge.percentage / 100)} Tk`, valuesX, yPos, { align: 'center' });
+                pdf.text(`${chargeAmount} Tk`, valuesX, yPos, { align: 'center' });
                 yPos += 7;
             });
 
             // Total line
             pdf.setDrawColor(...primaryColor);
             pdf.setLineWidth(1);
-            pdf.line(totalsX, yPos, pageWidth - 20, yPos);
+            pdf.line(totalsX - 5, yPos, valuesX + 10, yPos);
             yPos += 10;
 
             // Final total
