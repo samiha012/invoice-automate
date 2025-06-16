@@ -171,7 +171,7 @@
 
         .charges-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(3, 1fr);
             gap: 15px;
         }
 
@@ -417,12 +417,20 @@
             <div class="section" id="chargesSection" style="display: none;">
                 <h2>💰 Additional Charges</h2>
                 <p>Select the charges you want to include in the invoice:</p>
+                <br>
                 <div class="charges-grid">
                     <div class="charge-item" data-charge="tax">
                         <label>
                             <input type="checkbox" id="taxCharge" class="charge-checkbox" value="11">
                             <span class="charge-label">Shop Charge (11%)</span>
                             <div class="charge-description">Standard tech charge applicable on sales</div>
+                        </label>
+                    </div>
+                    <div class="charge-item" data-charge="tax">
+                        <label>
+                            <input type="checkbox" id="tax20Charge" class="charge-checkbox" value="20">
+                            <span class="charge-label">Shop Charge (20%)</span>
+                            <div class="charge-description">Non-acs tech charge applicable on sales</div>
                         </label>
                     </div>
                     <div class="charge-item" data-charge="service">
@@ -1110,7 +1118,7 @@
             pdf.setFontSize(11);
             pdf.setFont('helvetica', 'normal');
             pdf.text('Subtotal:', totalsX, yPos);
-            pdf.text(`${totalRevenue} Tk`, valuesX, yPos, { align: 'center' });
+            pdf.text(`${totalRevenue.toLocaleString()} Tk`, valuesX, yPos, { align: 'center' });
             yPos += 8;
 
             // Additional charges
@@ -1125,7 +1133,7 @@
                 }
 
                 pdf.text(`${charge.label}:`, totalsX, yPos);
-                pdf.text(`${chargeAmount} Tk`, valuesX, yPos, { align: 'center' });
+                pdf.text(`-${Math.ceil(chargeAmount).toLocaleString()} Tk`, valuesX, yPos, { align: 'center' });
                 yPos += 7;
             });
 
@@ -1147,7 +1155,7 @@
 
             // Total amount in dark pink
             pdf.setTextColor(199, 21, 133); // Dark pink color
-            pdf.text(`${finalTotal} Tk`, valuesX, yPos + 3, { align: 'center' });
+            pdf.text(`${finalTotal.toLocaleString()} Tk`, valuesX, yPos + 3, { align: 'center' });
 
             // Footer
             yPos = 280;
@@ -1163,7 +1171,7 @@
             pdf.line(20, yPos - 5, pageWidth - 20, yPos - 5);
 
             // Save the PDF
-            pdf.save(`professional-invoice-${new Date().toISOString().split('T')[0]}.pdf`);
+            pdf.save(`ASG-SHOP-${clientInfo.course || 'unknown'}-invoice-${new Date().toISOString().split('T')[0]}.pdf`);
         });
 
     </script>
