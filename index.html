@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            padding: 40px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+            padding: 30px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(102, 126, 234, 0.1);
+        }
+
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section h2::before {
+            content: '';
+            width: 4px;
+            height: 25px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 2px;
+        }
+
+        .file-upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .file-upload-area:hover {
+            border-color: #764ba2;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            transform: translateY(-2px);
+        }
+
+        .file-upload-area.dragover {
+            border-color: #764ba2;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.15));
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .uploaded-files {
+            margin-top: 20px;
+        }
+
+        .file-item {
+            background: linear-gradient(135deg, #f8f9ff, #f0f4ff);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            border-left: 4px solid #667eea;
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .file-status {
+            color: #28a745;
+            font-size: 0.9rem;
+        }
+
+        .data-summary {
+            background: linear-gradient(135deg, #e8f5e8, #f0fff0);
+            border: 1px solid #28a745;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 15px;
+        }
+
+        .summary-item {
+            text-align: center;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .summary-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .summary-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .charges-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .charge-item {
+            background: linear-gradient(135deg, #f8f9ff, #f0f4ff);
+            padding: 20px;
+            border-radius: 12px;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .charge-item:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.15);
+        }
+
+        .charge-item.selected {
+            border-color: #667eea;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+        }
+
+        .charge-checkbox {
+            margin-right: 12px;
+            transform: scale(1.2);
+        }
+
+        .charge-label {
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1rem;
+        }
+
+        .charge-description {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .invoice-preview {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 30px;
+            margin-top: 20px;
+        }
+
+        .invoice-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .invoice-title {
+            font-size: 2rem;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .invoice-details {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+
+        .invoice-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .invoice-table th,
+        .invoice-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        .invoice-table th {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            font-weight: 600;
+        }
+
+        .invoice-table tr:nth-child(even) {
+            background: #f8f9ff;
+        }
+
+        .total-section {
+            margin-top: 20px;
+            text-align: right;
+        }
+
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .total-row.final {
+            font-weight: bold;
+            font-size: 1.2rem;
+            border-bottom: 2px solid #667eea;
+            color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-generate {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        .btn-generate:hover {
+            box-shadow: 0 10px 25px rgba(40, 167, 69, 0.4);
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            border: 1px solid #f5c6cb;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Invoice Generator</h1>
+            <p>Upload your sales data and generate professional invoices instantly</p>
+        </div>
+
+        <div class="main-content">
+            <!-- File Upload Section -->
+            <div class="section">
+                <h2>📁 Upload Sales Data</h2>
+                <div class="file-upload-area" id="fileUploadArea">
+                    <div class="upload-icon">📎</div>
+                    <h3>Drop Excel files here or click to browse</h3>
+                    <p>Support for .xlsx and .xls files</p>
+                    <input type="file" id="fileInput" class="file-input" multiple accept=".xlsx,.xls">
+                </div>
+                <div class="uploaded-files" id="uploadedFiles"></div>
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>Processing files...</p>
+                </div>
+            </div>
+
+            <!-- Data Summary Section -->
+            <div class="section" id="dataSummarySection" style="display: none;">
+                <h2>📈 Sales Summary</h2>
+                <div class="data-summary">
+                    <h3>Extracted Data Overview</h3>
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <div class="summary-value" id="totalFiles">0</div>
+                            <div class="summary-label">Files Processed</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-value" id="totalProducts">0</div>
+                            <div class="summary-label">Total Products Sold</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-value" id="totalRevenue">৳0</div>
+                            <div class="summary-label">Total Revenue</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charges Selection Section -->
+            <div class="section" id="chargesSection" style="display: none;">
+                <h2>💰 Additional Charges</h2>
+                <p>Select the charges you want to include in the invoice:</p>
+                <div class="charges-grid">
+                    <div class="charge-item" data-charge="tax">
+                        <label>
+                            <input type="checkbox" id="taxCharge" class="charge-checkbox" value="11">
+                            <span class="charge-label">Shop Charge (11%)</span>
+                            <div class="charge-description">Standard tech charge applicable on sales</div>
+                        </label>
+                    </div>
+                    <div class="charge-item" data-charge="service">
+                        <label>
+                            <input type="checkbox" id="serviceCharge" class="charge-checkbox" value="2">
+                            <span class="charge-label">CX Charge (2%)</span>
+                            <div class="charge-description">Customer experience service fee</div>
+                        </label>
+                    </div>
+                    <div class="charge-item" data-charge="processing">
+                        <label>
+                            <input type="checkbox" id="processingCharge" class="charge-checkbox" value="1.5">
+                            <span class="charge-label">Processing Fee (1.5%)</span>
+                            <div class="charge-description">Payment processing charges</div>
+                        </label>
+                    </div>
+                    <div class="charge-item" data-charge="delivery">
+                        <label>
+                            <input type="checkbox" id="deliveryCharge" class="charge-checkbox" value="3">
+                            <span class="charge-label">Delivery Charge (3%)</span>
+                            <div class="charge-description">Shipping and handling fees</div>
+                        </label>
+                    </div>
+                    <div class="charge-item" data-charge="handling">
+                        <label>
+                            <input type="checkbox" id="handlingCharge" class="charge-checkbox" value="1">
+                            <span class="charge-label">Handling Fee (1%)</span>
+                            <div class="charge-description">Product handling charges</div>
+                        </label>
+                    </div>
+                    <div class="charge-item" data-charge="insurance">
+                        <label>
+                            <input type="checkbox" id="insuranceCharge" class="charge-checkbox" value="0.5">
+                            <span class="charge-label">Insurance (0.5%)</span>
+                            <div class="charge-description">Product insurance coverage</div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div
+                style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #dee2e6;">
+                <h3 style="margin-top: 0; color: #2980b9;">Client Information</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                    <div>
+                        <label for="clientName" style="display: block; margin-bottom: 5px; font-weight: bold;">Client
+                            Name:</label>
+                        <input type="text" id="clientName" placeholder="Enter client company name"
+                            style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                    </div>
+                    <div>
+                        <label for="clientAddress" style="display: block; margin-bottom: 5px; font-weight: bold;">Client
+                            Address:</label>
+                        <input type="text" id="clientAddress" placeholder="Enter client address"
+                            style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                    <div>
+                        <label for="projectName" style="display: block; margin-bottom: 5px; font-weight: bold;">Project
+                            Name</label>
+                        <input type="text" id="projectName" placeholder="Enter project name"
+                            style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                    </div>
+                    <div>
+                        <label for="courseName" style="display: block; margin-bottom: 5px; font-weight: bold;">Course
+                            Name:</label>
+                        <input type="text" id="courseName" placeholder="e.g., Compact Biology"
+                            style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Invoice Preview Section -->
+            <div class="section" id="invoiceSection" style="display: none;">
+                <h2>📄 Invoice Preview</h2>
+                <div class="invoice-preview" id="invoicePreview">
+                    <!-- Invoice content will be generated here -->
+                </div>
+                <div style="text-align: center; margin-top: 30px;">
+                    <button class="btn btn-generate" id="generatePdfBtn">📥 Download PDF Invoice</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let salesData = [];
+        let totalRevenue = 0;
+        let totalProducts = 0;
+        let fileCount = 0;
+
+        // File upload handling
+        const fileUploadArea = document.getElementById('fileUploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const uploadedFiles = document.getElementById('uploadedFiles');
+        const loading = document.getElementById('loading');
+
+        fileUploadArea.addEventListener('click', () => fileInput.click());
+        fileUploadArea.addEventListener('dragover', handleDragOver);
+        fileUploadArea.addEventListener('drop', handleDrop);
+        fileInput.addEventListener('change', handleFileSelect);
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            fileUploadArea.classList.add('dragover');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            fileUploadArea.classList.remove('dragover');
+            const files = Array.from(e.dataTransfer.files);
+            processFiles(files);
+        }
+
+        function handleFileSelect(e) {
+            const files = Array.from(e.target.files);
+            processFiles(files);
+        }
+
+        async function processFiles(files) {
+            loading.style.display = 'block';
+            uploadedFiles.innerHTML = '';
+            salesData = [];
+            totalRevenue = 0;
+            totalProducts = 0;
+            fileCount = 0;
+
+            for (const file of files) {
+                if (file.type.includes('sheet') || file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+                    await processExcelFile(file);
+                } else {
+                    showError(`Unsupported file type: ${file.name}`);
+                }
+            }
+
+            loading.style.display = 'none';
+            updateSummary();
+            showSections();
+        }
+
+        function processExcelFile(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+
+                        if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+                            throw new Error('No sheets found in the Excel file');
+                        }
+
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+
+                        if (jsonData.length === 0) {
+                            throw new Error('No data found in the sheet');
+                        }
+
+                        const headers = jsonData[1].map(h => (typeof h === 'string' ? h.trim() : h));
+                        const objectData = jsonData.slice(2).map(row => {
+                            const obj = {};
+                            headers.forEach((header, index) => {
+                                obj[header] = row[index];
+                            });
+                            return obj;
+                        });
+
+
+                        console.log(`File: ${file.name}`);
+                        console.log('Headers found:', headers);
+                        console.log('Sample data:', objectData.slice(0, 2));
+
+                        const fileData = extractSalesData(objectData, file.name);
+                        salesData.push(...fileData);
+                        fileCount++;
+
+                        const detailedInfo = `${fileData.length} records extracted. Columns: ${headers.join(', ')}`;
+                        showFileUploadSuccess(file.name, detailedInfo);
+                        resolve();
+                    } catch (error) {
+                        console.error('File processing error:', error);
+                        showError(`Error processing ${file.name}: ${error.message}`);
+                        resolve();
+                    }
+                };
+                reader.onerror = function () {
+                    showError(`Failed to read file: ${file.name}`);
+                    resolve();
+                };
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function extractSalesData(jsonData, fileName) {
+            const extractedData = [];
+
+            // Group data by Cycle and Amount
+            const groupedData = {};
+
+            jsonData.slice(1).forEach((row, index) => {
+                // Extract cycle and amount from the row
+                let cycle = '';
+                let amount = 0;
+
+                // Find cycle column (case insensitive)
+                const cycleKeys = Object.keys(row).filter(key =>
+                    key.toLowerCase().includes('cycle')
+                );
+
+                // Find amount column (case insensitive)
+                const amountKeys = Object.keys(row).filter(key =>
+                    key.toLowerCase().includes('amount')
+                );
+
+                if (cycleKeys.length > 0) {
+                    cycle = row[cycleKeys[0]] || '';
+                }
+
+                if (amountKeys.length > 0) {
+                    amount = parseFloat(row[amountKeys[0]]) || 0;
+                }
+
+                // Skip if no valid cycle or amount
+                if (!cycle || amount <= 0) return;
+
+                // Create grouping key
+                const key = `${cycle}_${amount}`;
+
+                if (!groupedData[key]) {
+                    groupedData[key] = {
+                        cycle: cycle,
+                        amount: amount,
+                        count: 0,
+                        totalAmount: 0
+                    };
+                }
+
+                groupedData[key].count += 1;
+                groupedData[key].totalAmount += amount;
+            });
+
+            // Convert grouped data to extractedData format
+            Object.values(groupedData).forEach(group => {
+                extractedData.push({
+                    productName: `${group.cycle} Sales`,
+                    price: group.amount,
+                    quantity: group.count,
+                    totalAmount: group.totalAmount,
+                    fileName,
+                    cycle: group.cycle,
+                    priceColumn: 'Amount'
+                });
+
+                totalRevenue += group.totalAmount;
+                totalProducts += group.count;
+            });
+
+            // Sort by cycle and then by amount (descending)
+            extractedData.sort((a, b) => {
+                if (a.cycle !== b.cycle) {
+                    return a.cycle.localeCompare(b.cycle);
+                }
+                return b.price - a.price;
+            });
+
+            return extractedData;
+        }
+
+        function extractDateRangeFromFileName(fileName) {
+            const match = fileName.match(/\((\d{4}-\d{2}-\d{2}) - (\d{4}-\d{2}-\d{2})\)/);
+            if (match) {
+                const [_, fromDateStr, toDateStr] = match;
+
+                const fromDate = new Date(fromDateStr);
+                const toDate = new Date(toDateStr);
+
+                const options = { day: 'numeric', month: 'long', year: 'numeric' };
+                return {
+                    from: fromDate.toLocaleDateString('en-US', options),
+                    to: toDate.toLocaleDateString('en-US', options)
+                };
+            }
+            return null;
+        }
+
+
+        function showFileUploadSuccess(fileName, details) {
+            const fileItem = document.createElement('div');
+            fileItem.className = 'file-item fade-in';
+            fileItem.innerHTML = `
+                <div>
+                    <div class="file-name">${fileName}</div>
+                    <div class="file-status">✅ ${details}</div>
+                </div>
+            `;
+            uploadedFiles.appendChild(fileItem);
+        }
+
+        function showError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message fade-in';
+            errorDiv.textContent = message;
+            uploadedFiles.appendChild(errorDiv);
+        }
+
+        function updateSummary() {
+            document.getElementById('totalFiles').textContent = fileCount;
+            document.getElementById('totalProducts').textContent = totalProducts;
+            document.getElementById('totalRevenue').textContent = `${totalRevenue}`;
+        }
+
+        function showSections() {
+            if (salesData.length > 0) {
+                document.getElementById('dataSummarySection').style.display = 'block';
+                document.getElementById('chargesSection').style.display = 'block';
+                generateInvoicePreview();
+            }
+        }
+
+        // Charge selection handling
+        document.querySelectorAll('.charge-item').forEach(item => {
+            item.addEventListener('click', function () {
+                const checkbox = this.querySelector('input[type="checkbox"]');
+                checkbox.checked = !checkbox.checked;
+                this.classList.toggle('selected', checkbox.checked);
+                generateInvoicePreview();
+            });
+        });
+
+        document.querySelectorAll('.charge-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function () {
+                const chargeItem = this.closest('.charge-item');
+                chargeItem.classList.toggle('selected', this.checked);
+                generateInvoicePreview();
+            });
+        });
+
+        function generateInvoicePreview() {
+            if (salesData.length === 0) return;
+
+            const selectedCharges = [];
+            document.querySelectorAll('.charge-checkbox:checked').forEach(checkbox => {
+                const label = checkbox.nextElementSibling.textContent;
+                const percentage = parseFloat(checkbox.value);
+                selectedCharges.push({ label, percentage });
+            });
+
+            let chargesTotal = 0;
+            selectedCharges.forEach(charge => {
+                chargesTotal += (totalRevenue * charge.percentage / 100);
+            });
+
+            const finalTotal = Math.ceil(totalRevenue - chargesTotal);
+
+            const invoiceHTML = `
+                <div class="invoice-header">
+                    <h1 class="invoice-title">SALES INVOICE</h1>
+                    <p>Invoice Date: ${new Date().toLocaleDateString()}</p>
+                    <p>Invoice #: INV-${Date.now().toString().slice(-6)}</p>
+                </div>
+
+                <div class="invoice-details">
+                    <div>
+                        <h3>From:</h3>
+                        <p>Your Company Name</p>
+                        <p>Company Address</p>
+                        <p>City, State, ZIP</p>
+                    </div>
+                    <div>
+                        <h3>Summary:</h3>
+                        <p>Files Processed: ${fileCount}</p>
+                        <p>Total Products: ${totalProducts}</p>
+                        <p>Period: ${new Date().toLocaleDateString()}</p>
+                    </div>
+                </div>
+
+                <table class="invoice-table">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Source</th>
+                            <th>Quantity</th>
+                            <th>Unit Price</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${salesData.map(item => `
+                            <tr>
+                                <td>${item.productName}</td>
+                                <td>${item.fileName.replace(/\.[^/.]+$/, "")} - ${item.priceColumn || 'N/A'}</td>
+                                <td>${item.quantity}</td>
+                                <td>${item.price}</td>
+                                <td>${item.totalAmount}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+
+                <div class="total-section">
+                    <div class="total-row">
+                        <span>Subtotal:</span>
+                        <span>৳${totalRevenue}</span>
+                    </div>
+                    ${selectedCharges.map(charge => `
+                        <div class="total-row">
+                            <span>${charge.label}:</span>
+                            <span>৳${(totalRevenue * charge.percentage / 100)}</span>
+                        </div>
+                    `).join('')}
+                    <div class="total-row final">
+                        <span>TOTAL:</span>
+                        <span>৳${finalTotal}</span>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('invoicePreview').innerHTML = invoiceHTML;
+            document.getElementById('invoiceSection').style.display = 'block';
+        }
+
+
+        // PDF generation
+
+        const generateBtn = document.getElementById('generatePdfBtn');
+        if (!document.getElementById('clientName')) {
+            generateBtn.insertAdjacentHTML('beforebegin', clientInputsHTML);
+        }
+
+        //Professional PDF generation
+        document.getElementById('generatePdfBtn').addEventListener('click', function () {
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
+
+            // Get client information from input fields
+            const dateRange = extractDateRangeFromFileName(salesData[0]?.fileName || '');
+            const startDate = dateRange ? `From: ${dateRange.from}` : '';
+            const endDate = dateRange ? `To: ${dateRange.to}` : '';
+
+            const clientName = document.getElementById('clientName').value || 'Client Company Name';
+            const clientAddress = document.getElementById('clientAddress').value || 'Client Address Line 1';
+            const projectName = document.getElementById('projectName').value || 'Course Name';
+            const courseName = document.getElementById('courseName').value || 'Course Name';
+
+            // Selected charges
+            const selectedCharges = [];
+            document.querySelectorAll('.charge-checkbox:checked').forEach(checkbox => {
+                const label = checkbox.nextElementSibling.textContent;
+                const percentage = parseFloat(checkbox.value);
+                selectedCharges.push({ label, percentage });
+            });
+
+            let chargesTotal = 0;
+            selectedCharges.forEach(charge => {
+                chargesTotal += (totalRevenue * charge.percentage / 100);
+            });
+            const finalTotal = Math.ceil(totalRevenue - chargesTotal);
+
+            const pageWidth = pdf.internal.pageSize.getWidth();
+
+            // Colors
+            const primaryColor = [54, 111, 217]; // Professional blue
+            const darkGray = [52, 73, 94];
+            const lightGray = [236, 240, 241];
+            const black = [0, 0, 0];
+
+            // Header
+            // Company Header Section with white background
+            pdf.setFillColor(255, 255, 255);
+            pdf.rect(0, 0, pageWidth, 35, 'F');
+
+            // Add company logo
+            pdf.addImage('https://i.postimg.cc/zvGvwnbC/favicon.png', 'PNG', 15, 8, 20, 20);
+
+            // Company name in blue
+            pdf.setTextColor(...primaryColor);
+            pdf.setFontSize(24);
+            pdf.setFont(undefined, 'bold');
+            pdf.text('ASG SHOP INVOICE', 45, 18);
+
+            // Company details in smaller font, dark gray
+            pdf.setTextColor(...darkGray);
+            pdf.setFontSize(8);
+            pdf.setFont(undefined, 'normal');
+
+            let y = 24;
+            pdf.text('Flat #B1, House #364, Road #5 Avenue 4', 45, y);
+            y += 4;
+            pdf.text('Phone: 09677-005588 | Email: support@aparsclassroom.com', 45, y);
+            y += 4;
+            pdf.text(`Date: ${new Date().toLocaleDateString()} | Invoice #: INV-${Date.now().toString().slice(-6)}`, 45, y);
+
+            // Add horizontal line before client section
+            pdf.setDrawColor(230, 230, 230);
+            pdf.setLineWidth(0.5);
+            pdf.line(15, 38, pageWidth - 15, 38);
+
+            // Client and project info section with better spacing
+            let yPos = 45;
+
+            // Bill To section
+            pdf.setTextColor(...primaryColor);
+            pdf.setFontSize(12);
+            pdf.setFont(undefined, 'bold');
+            pdf.text('Bill To:', 15, yPos);
+
+            pdf.setTextColor(...black);
+            pdf.setFontSize(10);
+            pdf.setFont(undefined, 'normal');
+            yPos += 7;
+            pdf.text(clientName, 15, yPos);
+            yPos += 6;
+            pdf.text(clientAddress, 15, yPos);
+            yPos += 6;
+            pdf.text(`Project: ${projectName}`, 15, yPos);
+
+            // Service Period section - positioned on the right
+            pdf.setTextColor(...primaryColor);
+            pdf.setFontSize(12);
+            pdf.setFont(undefined, 'bold');
+            pdf.text('Service Period:', 120, 45);
+
+            pdf.setTextColor(...black);
+            pdf.setFontSize(10);
+            pdf.setFont(undefined, 'normal');
+            pdf.text(startDate, 120, 52);
+            pdf.text(endDate, 120, 58);
+
+            // Add horizontal line after client section
+            pdf.setDrawColor(230, 230, 230);
+            pdf.setLineWidth(0.5);
+            pdf.line(15, yPos + 8, pageWidth - 15, yPos + 8);
+
+            // Table Header Styling
+            yPos = 80;
+            const headerHeight = 12;
+            const colPadding = 5;
+            const colWidths = {
+                description: 90,
+                qty: 20,
+                unitPrice: 30,
+                amount: 30
+            };
+
+            const startX = 20;
+
+            // Rounded background
+            pdf.setFillColor(...primaryColor);
+            pdf.roundedRect(startX, yPos, pageWidth - 40, headerHeight, 2, 2, 'F');
+
+            pdf.setTextColor(255, 255, 255);
+            pdf.setFontSize(11);
+            pdf.setFont(undefined, 'bold');
+
+            let colX = startX + colPadding;
+            pdf.text('DESCRIPTION', colX, yPos + 5);
+
+            colX = startX + colWidths.description + colPadding + 5;
+            pdf.text('QTY', colX, yPos + 5, { align: 'center' });
+
+            colX += colWidths.qty;
+            pdf.text('UNIT PRICE', colX, yPos + 5, { align: 'center' });
+
+            colX += colWidths.unitPrice;
+            pdf.text('TOTAL PRICE', colX, yPos + 5, { align: 'center' });
+
+
+            // Table rows
+            yPos += 10;
+            pdf.setTextColor(...black);
+            pdf.setFontSize(10);
+            pdf.setFont(undefined, 'normal');
+
+            let rowCounter = 0;
+            salesData.forEach(item => {
+                if (yPos > 250) {
+                    pdf.addPage();
+                    yPos = 30;
+                }
+
+                // Alternate row colors
+                if (rowCounter % 2 === 0) {
+                    pdf.setFillColor(250, 250, 250);
+                    pdf.rect(20, yPos - 3, pageWidth - 40, 8, 'F');
+                }
+
+                // Format product name with course name and cycle
+                let productName = item.productName;
+                if (courseName && courseName.trim() !== '' && courseName !== 'Course Name') {
+                    // Replace generic names with course name + cycle format
+                    if (productName.toLowerCase().includes('cycle')) {
+                        const cycleMatch = productName.match(/cycle[\s-]*(\d+)/i);
+                        if (cycleMatch) {
+                            productName = `${courseName} Cycle ${cycleMatch[1]}`;
+                        }
+                    } else {
+                        // If no cycle mentioned, just use the course name
+                        productName = productName.replace(/^[^-]*/, courseName);
+                    }
+                }
+
+                // Truncate long product names
+                productName = productName.length > 45 ?
+                    productName.substring(0, 42) + '...' : productName;
+
+                pdf.text(productName, 25, yPos + 2);
+                pdf.text(item.quantity.toString(), 120, yPos + 2, { align: 'center' });
+                pdf.text(`${item.price}`, 140, yPos + 2, { align: 'center' });
+                pdf.text(`${item.totalAmount}`, 170, yPos + 2, { align: 'center' });
+
+                yPos += 8;
+                rowCounter++;
+            });
+
+            // Totals section
+            yPos += 10;
+            const totalsX = 120;
+            const valuesX = 170;
+
+            // Separator line
+            pdf.setDrawColor(...darkGray);
+            pdf.setLineWidth(0.5);
+            pdf.line(totalsX, yPos, pageWidth - 20, yPos);
+            yPos += 8;
+
+            // Subtotal
+            pdf.setFontSize(11);
+            pdf.setFont('helvetica', 'normal');
+            pdf.text('Subtotal:', totalsX, yPos);
+            pdf.text(`${totalRevenue} Tk`, valuesX, yPos, { align: 'center' });
+            yPos += 8;
+
+            // Additional charges
+            selectedCharges.forEach(charge => {
+                pdf.text(`${charge.label}:`, totalsX, yPos);
+                pdf.text(`${(totalRevenue * charge.percentage / 100)} Tk`, valuesX, yPos, { align: 'center' });
+                yPos += 7;
+            });
+
+            // Total line
+            pdf.setDrawColor(...primaryColor);
+            pdf.setLineWidth(1);
+            pdf.line(totalsX, yPos, pageWidth - 20, yPos);
+            yPos += 10;
+
+            // Final total
+            pdf.setFillColor(255, 255, 255); // White background
+            pdf.rect(totalsX - 5, yPos - 5, pageWidth - totalsX - 15, 12, 'F');
+
+            // TOTAL text in blue
+            pdf.setTextColor(...primaryColor);
+            pdf.setFontSize(14);
+            pdf.setFont(undefined, 'bold');
+            pdf.text('TOTAL:', totalsX, yPos + 3);
+
+            // Total amount in dark pink
+            pdf.setTextColor(199, 21, 133); // Dark pink color
+            pdf.text(`${finalTotal} Tk`, valuesX, yPos + 3, { align: 'center' });
+
+            // Footer
+            yPos = 280;
+            pdf.setTextColor(...darkGray);
+            pdf.setFontSize(9);
+            pdf.setFont(undefined, 'normal');
+            pdf.text('Payment Terms: Net 30 days', 20, yPos);
+            pdf.text('Thank you for your business!', 20, yPos + 5);
+
+            // Footer line
+            pdf.setDrawColor(...lightGray);
+            pdf.setLineWidth(0.5);
+            pdf.line(20, yPos - 5, pageWidth - 20, yPos - 5);
+
+            // Save the PDF
+            pdf.save(`professional-invoice-${new Date().toISOString().split('T')[0]}.pdf`);
+        });
+
+    </script>
+</body>
+
+</html>
