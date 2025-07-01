@@ -447,6 +447,13 @@
                             <div class="charge-description">Exam App Charge - 100 taka per unique user</div>
                         </label>
                     </div>
+                    <div class="charge-item" data-charge="approval">
+                        <label>
+                            <input type="checkbox" id="approvalCharge" class="charge-checkbox" value="5">
+                            <span class="charge-label">Approval Charge (5tk per user)</span>
+                            <div class="charge-description">Approval Charge for facebook groups</div>
+                        </label>
+                    </div>
                 </div>
             </div>
 
@@ -472,12 +479,6 @@
                         <label for="projectName" style="display: block; margin-bottom: 5px; font-weight: bold;">Project
                             Name</label>
                         <input type="text" id="projectName" placeholder="Enter project name"
-                            style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                    </div>
-                    <div>
-                        <label for="courseName" style="display: block; margin-bottom: 5px; font-weight: bold;">Course
-                            Name:</label>
-                        <input type="text" id="courseName" placeholder="e.g., Compact Biology"
                             style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
                     </div>
                 </div>
@@ -516,10 +517,13 @@
             return selectedCharges;
         }
 
-        function calculateChargesTotal(selectedCharges, revenue, uniqueUsers) {
+        function calculateChargesTotal(selectedCharges, revenue, uniqueUsers, totalProducts) {
             return selectedCharges.reduce((total, charge) => {
                 if (charge.type === 'exam') {
                     return total + (uniqueUsers * charge.value);
+                }
+                if (charge.type === 'approval') {
+                    return total + (totalProducts * charge.value);
                 }
                 return total + (revenue * charge.value / 100);
             }, 0);
@@ -530,7 +534,6 @@
                 name: document.getElementById('clientName').value || 'Client Company Name',
                 address: document.getElementById('clientAddress').value || 'Client Address Line 1',
                 project: document.getElementById('projectName').value || 'Course Name',
-                course: document.getElementById('courseName').value || 'Course Name'
             };
         }
 
@@ -687,6 +690,7 @@
 
             // Track unique users locally for this file
             const fileUniqueUsers = new Set();
+            let productValue = '';
 
             jsonData.forEach((row, index) => {
                 // Extract cycle, amount, and email from the row
@@ -721,6 +725,17 @@
                     email = row[emailKeys[0]] || '';
                 }
 
+                const productKeys = Object.keys(row).filter(key =>
+                    key.toLowerCase().includes('product')
+                );
+
+                if (!productValue && productKeys.length > 0) {
+                    const value = row[productKeys[0]];
+                    if (value && typeof value === 'string') {
+                        productValue = value.trim();
+                    }
+                }
+
                 // Skip if no valid cycle, amount, or email
                 if (!cycle || amount <= 0 || !email) return;
 
@@ -747,7 +762,7 @@
             // Convert grouped data to extractedData format
             Object.values(groupedData).forEach(group => {
                 extractedData.push({
-                    productName: `${group.cycle} Sales`,
+                    productName: `${productValue} - ${group.cycle}`,
                     price: group.amount,
                     quantity: group.count,
                     totalAmount: group.totalAmount,
@@ -849,7 +864,7 @@
             if (salesData.length === 0) return;
 
             const selectedCharges = getSelectedCharges();
-            const chargesTotal = calculateChargesTotal(selectedCharges, totalRevenue, totalUniqueUsersGlobal);
+            const chargesTotal = calculateChargesTotal(selectedCharges, totalRevenue, totalUniqueUsersGlobal, totalProducts);
             const finalTotal = Math.ceil(totalRevenue - chargesTotal);
 
             const invoiceHTML = `
@@ -903,16 +918,16 @@
                         <span>৳${totalRevenue}</span>
                     </div>
                     ${selectedCharges.map(charge => {
-                        const chargeAmount = charge.type === 'exam' 
-                            ? totalUniqueUsersGlobal * charge.value 
-                            : totalRevenue * charge.value / 100;
-                        return `
+                const chargeAmount = charge.type === 'exam'
+                    ? totalUniqueUsersGlobal * charge.value
+                    : totalRevenue * charge.value / 100;
+                return `
                             <div class="total-row">
                                 <span>${charge.label}:</span>
                                 <span>৳${chargeAmount.toLocaleString()}</span>
                             </div>
                         `;
-                    }).join('')}
+            }).join('')}
                     <div class="total-row final">
                         <span>TOTAL:</span>
                         <span>৳${finalTotal}</span>
@@ -932,7 +947,7 @@
             const clientInfo = getClientInfo();
             const dateRange = formatDateRange(salesData[0]?.fileName || '');
             const selectedCharges = getSelectedCharges();
-            const chargesTotal = calculateChargesTotal(selectedCharges, totalRevenue, totalUniqueUsersGlobal);
+            const chargesTotal = calculateChargesTotal(selectedCharges, totalRevenue, totalUniqueUsersGlobal, totalProducts);
             const finalTotal = Math.ceil(totalRevenue - chargesTotal);
 
             const pageWidth = pdf.internal.pageSize.getWidth();
@@ -1087,18 +1102,18 @@
                 pdf.addPage();
                 yPos = 30;
             }
-            
+
             // Add a light gray background for the total row
             pdf.setFillColor(240, 240, 240);
             pdf.rect(20, yPos - 3, pageWidth - 40, 8, 'F');
-            
+
             // Make the text bold for the total row
             pdf.setFont(undefined, 'bold');
             pdf.text('Total Products Sold:', 25, yPos + 2);
             pdf.text(totalProducts.toString(), 120, yPos + 2, { align: 'center' });
             pdf.text('-', 140, yPos + 2, { align: 'center' });
             pdf.text('-', 170, yPos + 2, { align: 'center' });
-            
+
             // Reset font to normal for the rest of the document
             pdf.setFont(undefined, 'normal');
             yPos += 12;  // Add extra space after the total row
@@ -1157,21 +1172,9 @@
             pdf.setTextColor(199, 21, 133); // Dark pink color
             pdf.text(`${finalTotal.toLocaleString()} Tk`, valuesX, yPos + 3, { align: 'center' });
 
-            // Footer
-            yPos = 280;
-            pdf.setTextColor(...darkGray);
-            pdf.setFontSize(9);
-            pdf.setFont(undefined, 'normal');
-            pdf.text('Payment Terms: Net 30 days', 20, yPos);
-            pdf.text('Thank you for your business!', 20, yPos + 5);
-
-            // Footer line
-            pdf.setDrawColor(...lightGray);
-            pdf.setLineWidth(0.5);
-            pdf.line(20, yPos - 5, pageWidth - 20, yPos - 5);
 
             // Save the PDF
-            pdf.save(`ASG-SHOP-${clientInfo.course || 'unknown'}-invoice-${new Date().toISOString().split('T')[0]}.pdf`);
+            pdf.save(`ASG-SHOP-${clientInfo.project || 'unknown'}-invoice-${new Date().toISOString().split('T')[0]}.pdf`);
         });
 
     </script>
