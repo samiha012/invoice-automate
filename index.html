@@ -523,7 +523,7 @@
                     return total + (uniqueUsers * charge.value);
                 }
                 if (charge.type === 'approval') {
-                    return total + (totalProducts * charge.value);
+                    return total + (totalProducts * 5);
                 }
                 return total + (revenue * charge.value / 100);
             }, 0);
@@ -719,7 +719,7 @@
 
                 if (amountKeys.length > 0) {
                     amount = parseFloat(row[amountKeys[0]]) || 0;
-                    if (amount === 1350) {
+                    if (amount === 1350 || amount === 1250) {
                         amount = 1000;
                     }
                 }
@@ -922,9 +922,14 @@
                         <span>৳${totalRevenue}</span>
                     </div>
                     ${selectedCharges.map(charge => {
-                const chargeAmount = charge.type === 'exam'
-                    ? totalUniqueUsersGlobal * charge.value
-                    : totalRevenue * charge.value / 100;
+                let chargeAmount;
+                if (charge.type === 'exam') {
+                    chargeAmount = totalUniqueUsersGlobal * charge.value;
+                } else if (charge.type === 'approval') {
+                    chargeAmount = totalProducts * 5;
+                } else {
+                    chargeAmount = totalRevenue * charge.value / 100;
+                }
                 return `
                             <div class="total-row">
                                 <span>${charge.label}:</span>
@@ -1144,10 +1149,10 @@
             selectedCharges.forEach(charge => {
                 let chargeAmount;
                 if (charge.type === 'exam') {
-                    // Exam charge: fixed amount per unique user
                     chargeAmount = totalUniqueUsersGlobal * charge.value;
+                } else if (charge.type === 'approval') {
+                    chargeAmount = totalProducts * 5;
                 } else {
-                    // Percentage-based charges (tax, service, etc.)
                     chargeAmount = totalRevenue * charge.value / 100;
                 }
 
