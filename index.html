@@ -454,6 +454,13 @@
                             <div class="charge-description">Approval Charge for facebook groups</div>
                         </label>
                     </div>
+                     <div class="charge-item" data-charge="webapp">
+                        <label>
+                            <input type="checkbox" id="webappCharge" class="charge-checkbox" value="100000">
+                            <span class="charge-label">Web App Charge (100,000tk)</span>
+                            <div class="charge-description">One-time web application development charge</div>
+                        </label>
+                    </div>
                 </div>
             </div>
 
@@ -524,6 +531,9 @@
                 }
                 if (charge.type === 'approval') {
                     return total + (totalProducts * 5);
+                }
+                if (charge.type === 'webapp') {
+                    return total + charge.value; // Fixed charge for web app
                 }
                 return total + (revenue * charge.value / 100);
             }, 0);
@@ -927,7 +937,10 @@
                     chargeAmount = totalUniqueUsersGlobal * charge.value;
                 } else if (charge.type === 'approval') {
                     chargeAmount = totalProducts * 5;
-                } else {
+                } else if (charge.type === 'webapp') {
+                    chargeAmount = 100000; 
+                } 
+                 else {
                     chargeAmount = totalRevenue * charge.value / 100;
                 }
                 return `
@@ -1152,6 +1165,8 @@
                     chargeAmount = totalUniqueUsersGlobal * charge.value;
                 } else if (charge.type === 'approval') {
                     chargeAmount = totalProducts * 5;
+                } else if (charge.type === 'webapp') {
+                    chargeAmount = 100000;
                 } else {
                     chargeAmount = totalRevenue * charge.value / 100;
                 }
