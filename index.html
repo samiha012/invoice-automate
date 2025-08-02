@@ -454,7 +454,7 @@
                             <div class="charge-description">Approval Charge for facebook groups</div>
                         </label>
                     </div>
-                     <div class="charge-item" data-charge="webapp">
+                    <div class="charge-item" data-charge="webapp">
                         <label>
                             <input type="checkbox" id="webappCharge" class="charge-checkbox" value="100000">
                             <span class="charge-label">Web App Charge (100,000tk)</span>
@@ -694,53 +694,128 @@
 
         function extractSalesData(jsonData, fileName) {
             const extractedData = [];
-
-            // Group data by Cycle and Amount
             const groupedData = {};
-
-            // Track unique users locally for this file
             const fileUniqueUsers = new Set();
             let productValue = '';
 
+            // Debug logging
+            console.log('Starting data extraction for:', fileName);
+            console.log('Raw data length:', jsonData.length);
+            console.log('Available columns:', Object.keys(jsonData[0] || {}));
+
             jsonData.forEach((row, index) => {
-                // Extract cycle, amount, and email from the row
+                if (!row || Object.keys(row).length === 0) return;
+
                 let cycle = '';
                 let amount = 0;
                 let email = '';
 
-                // Find cycle column (case insensitive)
+                // Try to extract cycle from multiple possible sources
                 const cycleKeys = Object.keys(row).filter(key =>
-                    key.toLowerCase().includes('cycle')
+                    key && typeof key === 'string' && (
+                        key.toLowerCase().includes('cycle') ||
+                        key.toLowerCase().includes('batch') ||
+                        key.toLowerCase().includes('program')
+                    )
                 );
 
-                // Find amount column (case insensitive)
-                const amountKeys = Object.keys(row).filter(key =>
-                    key.toLowerCase().includes('amount')
-                );
+                // If no cycle column found, try to extract from product name or other columns
+                if (cycleKeys.length === 0) {
+                    // Try to find cycle in any column that might contain it
+                    for (const [key, value] of Object.entries(row)) {
+                        if (value && typeof value === 'string') {
+                            const cycleMatch = value.match(/(?:cycle|batch)[\s-]*(\d+)/i);
+                            if (cycleMatch) {
+                                cycle = cycleMatch[1];
+                                break;
+                            }
+                        }
+                    }
 
-                // Find email column (case insensitive)
-                const emailKeys = Object.keys(row).filter(key =>
-                    key.toLowerCase().includes('email')
-                );
-
-                if (cycleKeys.length > 0) {
+                    // If still no cycle, try to extract from filename
+                    if (!cycle) {
+                        const filenameMatch = fileName.match(/(?:cycle|batch)[\s-]*(\d+)/i);
+                        if (filenameMatch) {
+                            cycle = filenameMatch[1];
+                        }
+                    }
+                } else {
                     cycle = row[cycleKeys[0]] || '';
                 }
 
+                // Clean up cycle value
+                if (cycle) {
+                    // Extract just the number if cycle contains other text
+                    const cycleNumber = cycle.toString().match(/\d+/);
+                    if (cycleNumber) {
+                        cycle = `Cycle ${cycleNumber[0]}`;
+                    }
+                } else {
+                    // If still no cycle, use a default
+                    cycle = ' ';
+                }
+
+                // Extract amount with more flexible matching
+                const amountKeys = Object.keys(row).filter(key =>
+                    key && typeof key === 'string' && (
+                        key.toLowerCase().includes('amount') ||
+                        key.toLowerCase().includes('price') ||
+                        key.toLowerCase().includes('fee') ||
+                        key.toLowerCase().includes('paid') ||
+                        key.toLowerCase().includes('payment')
+                    )
+                );
+
                 if (amountKeys.length > 0) {
-                    amount = parseFloat(row[amountKeys[0]]) || 0;
-                    if (amount === 1350 || amount === 1250 || amount === 1300) {
-                        amount = 1000;
+                    const rawAmount = row[amountKeys[0]];
+                    if (typeof rawAmount === 'string') {
+                        amount = parseFloat(rawAmount.replace(/[৳,]/g, ''));
+                    } else {
+                        amount = parseFloat(rawAmount) || 0;
+                    }
+
+                    // Normalize certain amount values
+                    // if (amount === 1350 || amount === 1250 || amount === 1300) {
+                    //     amount = 1000;
+                    // }
+                }
+
+                // Extract email with more flexible matching
+                const emailKeys = Object.keys(row).filter(key =>
+                    key && typeof key === 'string' && (
+                        key.toLowerCase().includes('email') ||
+                        key.toLowerCase().includes('mail') ||
+                        key.toLowerCase().includes('gmail')
+                    )
+                );
+
+                if (emailKeys.length > 0) {
+                    email = row[emailKeys[0]];
+                    if (email && typeof email === 'string') {
+                        email = email.trim().toLowerCase();
                     }
                 }
 
-
-                if (emailKeys.length > 0) {
-                    email = row[emailKeys[0]] || '';
+                // Debug logging for skipped rows
+                if (!cycle || amount <= 0 || !email) {
+                    console.log(`Skipping row ${index}:`, {
+                        cycle: cycle || 'missing',
+                        amount: amount || 'invalid',
+                        email: email || 'missing',
+                        rowData: row
+                    });
+                    return;
                 }
 
+                fileUniqueUsers.add(email);
+
+                // Extract or use default product value
                 const productKeys = Object.keys(row).filter(key =>
-                    key.toLowerCase().includes('product')
+                    key && typeof key === 'string' && (
+                        key.toLowerCase().includes('product') ||
+                        key.toLowerCase().includes('course') ||
+                        key.toLowerCase().includes('program')
+                    )
                 );
 
                 if (!productValue && productKeys.length > 0) {
@@ -750,15 +825,13 @@
                     }
                 }
 
-                // Skip if no valid cycle, amount, or email
-                if (!cycle || amount <= 0 || !email) return;
+                // Use default product name if none found
+                if (!productValue) {
+                    productValue = 'Course';
+                }
 
-                // Add to file's unique users set
-                fileUniqueUsers.add(email.toLowerCase().trim());
-
-                // Create grouping key
+                // Group by cycle and amount
                 const key = `${cycle}_${amount}`;
-
                 if (!groupedData[key]) {
                     groupedData[key] = {
                         cycle: cycle,
@@ -768,12 +841,11 @@
                     };
                 }
 
-                // Simply increment count for each transaction
                 groupedData[key].count += 1;
                 groupedData[key].totalAmount += amount;
             });
 
-            // Convert grouped data to extractedData format
+            // Convert grouped data to final format
             Object.values(groupedData).forEach(group => {
                 extractedData.push({
                     productName: `${productValue} - ${group.cycle}`,
@@ -789,15 +861,20 @@
                 totalProducts += group.count;
             });
 
-            // Sort by cycle and then by amount (descending)
+            // Sort by cycle number
             extractedData.sort((a, b) => {
-                if (a.cycle !== b.cycle) {
-                    return a.cycle.localeCompare(b.cycle);
-                }
-                return b.price - a.price;
+                const cycleA = parseInt(a.cycle.match(/\d+/) || [0]);
+                const cycleB = parseInt(b.cycle.match(/\d+/) || [0]);
+                return cycleA - cycleB;
             });
 
-            // Return both extracted data and unique user count for this file
+            console.log('Extraction results:', {
+                fileName,
+                recordsExtracted: extractedData.length,
+                uniqueUsers: fileUniqueUsers.size,
+                groupedData
+            });
+
             return {
                 extractedData: extractedData,
                 totalUniqueUsers: fileUniqueUsers.size,
@@ -881,6 +958,14 @@
             const chargesTotal = calculateChargesTotal(selectedCharges, totalRevenue, totalUniqueUsersGlobal, totalProducts);
             const finalTotal = Math.ceil(totalRevenue - chargesTotal);
 
+            const formatProductName = (item) => {
+                // If cycle is empty or just a space, return product name without the cycle
+                if (!item.cycle || item.cycle.trim() === '' || item.cycle === ' ') {
+                    return item.productName.split(' - ')[0];
+                }
+                return item.productName;
+            };
+
             const invoiceHTML = `
                 <div class="invoice-header">
                     <h1 class="invoice-title">SALES INVOICE</h1>
@@ -916,7 +1001,7 @@
                     <tbody>
                         ${salesData.map(item => `
                             <tr>
-                                <td>${item.productName}</td>
+                                 <td>${formatProductName(item)}</td>
                                 <td>${item.fileName.replace(/\.[^/.]+$/, "")} - ${item.priceColumn || 'N/A'}</td>
                                 <td>${item.quantity}</td>
                                 <td>${item.price}</td>
@@ -938,9 +1023,9 @@
                 } else if (charge.type === 'approval') {
                     chargeAmount = totalProducts * 5;
                 } else if (charge.type === 'webapp') {
-                    chargeAmount = 100000; 
-                } 
-                 else {
+                    chargeAmount = 100000;
+                }
+                else {
                     chargeAmount = totalRevenue * charge.value / 100;
                 }
                 return `
@@ -1087,6 +1172,13 @@
             pdf.setFontSize(10);
             pdf.setFont(undefined, 'normal');
 
+            const formatPdfProductName = (productName, cycle) => {
+                if (!cycle || cycle.trim() === '' || cycle === ' ') {
+                    return productName.split(' - ')[0];
+                }
+                return productName;
+            };
+
             let rowCounter = 0;
             salesData.forEach(item => {
                 if (yPos > 250) {
@@ -1101,7 +1193,7 @@
                 }
 
                 // Format product name with course name and cycle
-                let productName = item.productName;
+        let productName = formatPdfProductName(item.productName, item.cycle);
                 if (clientInfo.course && clientInfo.course.trim() !== '' && clientInfo.course !== 'Course Name') {
                     productName = formatProductName(productName, clientInfo.course);
                 }
