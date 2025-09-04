@@ -428,13 +428,6 @@
                     </div>
                     <div class="charge-item" data-charge="tax">
                         <label>
-                            <input type="checkbox" id="tax20Charge" class="charge-checkbox" value="20">
-                            <span class="charge-label">Shop Charge (20%)</span>
-                            <div class="charge-description">Non-acs tech charge applicable on sales</div>
-                        </label>
-                    </div>
-                    <div class="charge-item" data-charge="tax">
-                        <label>
                             <input type="checkbox" id="tax20Charge" class="charge-checkbox" value="25">
                             <span class="charge-label">Shop Charge (25%)</span>
                             <div class="charge-description">Non-acs tech charge applicable on sales</div>
@@ -782,9 +775,9 @@
                     }
 
                     // Normalize certain amount values
-                    if (amount === 1350 || amount === 1250 || amount === 1300) {
-                        amount = 1000;
-                    }
+                    // if (amount === 1350 || amount === 1250 || amount === 1300) {
+                    //     amount = 1000;
+                    // }
                 }
 
                 // Extract email with more flexible matching
