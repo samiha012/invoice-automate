@@ -118,6 +118,20 @@
             </div>
 
             <div
+                style="background: #f0f7ff; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #cce5ff;">
+                <h3 style="margin-top: 0; color: #1a73e8;">Revenue Sharing</h3>
+                <div class="share-item">
+                    <label style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="quarterShare" class="share-checkbox">
+                        <span style="font-weight: bold;">Calculate 1/4th Share</span>
+                    </label>
+                    <div style="color: #666; margin-top: 5px; font-size: 0.9em;">
+                        Enable this option for shared revenue calculation (25% of final amount)
+                    </div>
+                </div>
+            </div>
+
+            <div
                 style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #dee2e6;">
                 <h3 style="margin-top: 0; color: #2980b9;">Client Information</h3>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
@@ -573,6 +587,9 @@
                 generateInvoicePreview();
             });
         });
+        document.getElementById('quarterShare').addEventListener('change', function () {
+            generateInvoicePreview();
+        });
 
         function generateInvoicePreview() {
             if (salesData.length === 0) return;
@@ -580,6 +597,8 @@
             const selectedCharges = getSelectedCharges();
             const chargesTotal = calculateChargesTotal(selectedCharges, totalRevenue, totalProducts);
             const finalTotal = Math.ceil(totalRevenue - chargesTotal);
+            const isQuarterShare = document.getElementById('quarterShare').checked;
+            const quarterShareAmount = isQuarterShare ? Math.ceil(finalTotal / 4) : 0;
 
             const formatProductName = (item) => {
                 // If cycle is empty or just a space, return product name without the cycle
@@ -663,6 +682,12 @@
                         <span>TOTAL:</span>
                         <span>৳${finalTotal}</span>
                     </div>
+                    ${isQuarterShare ? `
+                <div class="total-row" style="margin-top: 15px; padding-top: 10px; border-top: 2px dashed #ccc;">
+                    <span style="color: #1a73e8; font-weight: bold;">1/4th Total:</span>
+                    <span style="color: #1a73e8; font-weight: bold;">৳${quarterShareAmount}</span>
+                </div>
+            ` : ''}
                 </div>
             `;
 
@@ -913,6 +938,26 @@
             pdf.setTextColor(199, 21, 133); // Dark pink color
             pdf.text(`${finalTotal.toLocaleString()} Tk`, valuesX, yPos + 3, { align: 'center' });
 
+            const isQuarterShare = document.getElementById('quarterShare').checked;
+            if (isQuarterShare) {
+                yPos += 15;
+                const quarterShareAmount = Math.ceil(finalTotal / 4);
+
+                // Add a dashed line
+                pdf.setLineDashPattern([3, 3], 0);
+                pdf.setDrawColor(200, 200, 200);
+                pdf.line(totalsX - 5, yPos - 5, valuesX + 10, yPos - 5);
+                pdf.setLineDashPattern([], 0);
+
+                // Add share calculation
+                pdf.setTextColor(...primaryColor);
+                pdf.setFontSize(12);
+                pdf.setFont(undefined, 'bold');
+                pdf.text('(1/4th of TOTAL):', totalsX, yPos + 3);
+
+                pdf.setTextColor(...primaryColor);
+                pdf.text(`${quarterShareAmount.toLocaleString()} Tk`, valuesX, yPos + 3, { align: 'center' });
+            }
 
             // Save the PDF
             pdf.save(`ASG-SHOP-${clientInfo.project || 'unknown'}-invoice-${new Date().toISOString().split('T')[0]}.pdf`);
