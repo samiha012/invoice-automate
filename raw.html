@@ -100,6 +100,16 @@
                                 min="0">
                         </label>
                     </div>
+                    <div class="charge-item" data-charge="serverBil">
+                        <label>
+                            <input type="checkbox" id="serverCharge" class="charge-checkbox" value="140">
+                            <span class="charge-label">Server Bill (140tk per dollar)</span>
+                            <div class="charge-description">Enter the number of dollars manually:</div>
+                            <input type="number" id="dollarCount" placeholder="Enter count"
+                                style="width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px;"
+                                min="1">
+                        </label>
+                    </div>
                     <div class="charge-item" data-charge="approval">
                         <label>
                             <input type="checkbox" id="approvalCharge" class="charge-checkbox" value="5">
@@ -194,6 +204,11 @@
                 if (charge.type === 'exam') {
                     const manualUserCount = parseInt(document.getElementById('examUserCount').value, 10) || 0;
                     return total + (manualUserCount * charge.value);
+                }
+                if (charge.type === 'serverBil') {
+                    const manualCount = parseInt(document.getElementById('dollarCount').value, 10) || 0;
+                    console.log('Dollar count:', manualCount, 'Charge value:', charge.value, 'Result:', manualCount * charge.value);
+                    return total + (manualCount * charge.value);
                 }
                 if (charge.type === 'approval') {
                     return total + (totalProducts * 5);
@@ -663,7 +678,11 @@
                 if (charge.type === 'exam') {
                     const manualUserCount = parseInt(document.getElementById('examUserCount').value, 10) || 0;
                     chargeAmount = manualUserCount * charge.value;
-                } else if (charge.type === 'approval') {
+                } else if (charge.type === 'serverBil') {
+                    const manualCount = parseInt(document.getElementById('dollarCount').value, 10) || 0;
+                    chargeAmount = manualCount * charge.value;
+                }
+                else if (charge.type === 'approval') {
                     chargeAmount = totalProducts * 5;
                 } else if (charge.type === 'webapp') {
                     chargeAmount = 100000;
@@ -905,6 +924,9 @@
                 if (charge.type === 'exam') {
                     const manualUserCount = parseInt(document.getElementById('examUserCount').value, 10) || 0;
                     chargeAmount = manualUserCount * charge.value;
+                } else if (charge.type === 'serverBil') {
+                    const manualCount = parseInt(document.getElementById('dollarCount').value, 10) || 0;
+                    chargeAmount = manualCount * charge.value;
                 } else if (charge.type === 'approval') {
                     chargeAmount = totalProducts * 5;
                 } else if (charge.type === 'webapp') {
