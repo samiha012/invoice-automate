@@ -44,6 +44,11 @@
                             <div class="summary-value" id="totalFiles">0</div>
                             <div class="summary-label">Files Processed</div>
                         </div>
+                        <!-- unique student -->
+                        <!-- <div class="summary-item">
+                            <div class="summary-value" id="uniqueStudents">0</div>
+                            <div class="summary-label">Unique Students</div>
+                        </div> -->
                         <div class="summary-item">
                             <div class="summary-value" id="totalProducts">0</div>
                             <div class="summary-label">Total Products Sold</div>
@@ -93,7 +98,7 @@
                     <div class="charge-item" data-charge="exam">
                         <label>
                             <input type="checkbox" id="examCharge" class="charge-checkbox" value="100">
-                            <span class="charge-label">Exam App (100tk per user)</span>
+                            <span class="charge-label">Exam App (100tk per user) till 21st Nov</span>
                             <div class="charge-description">Enter the number of users manually:</div>
                             <input type="number" id="examUserCount" placeholder="Enter user count"
                                 style="width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px;"
@@ -102,8 +107,8 @@
                     </div>
                     <div class="charge-item" data-charge="serverBil">
                         <label>
-                            <input type="checkbox" id="serverCharge" class="charge-checkbox" value="140">
-                            <span class="charge-label">Server Bill (140tk per dollar)</span>
+                            <input type="checkbox" id="serverCharge" class="charge-checkbox" value="1">
+                            <span class="charge-label">Server Bill</span>
                             <div class="charge-description">Enter the number of dollars manually:</div>
                             <input type="number" id="dollarCount" placeholder="Enter count"
                                 style="width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px;"
@@ -186,6 +191,8 @@
         let totalRevenue = 0;
         let totalProducts = 0;
         let fileCount = 0;
+        //unique student
+        //let uniqueEmails = new Set();
 
         // Common utility functions
         function getSelectedCharges() {
@@ -208,7 +215,7 @@
                 if (charge.type === 'serverBil') {
                     const manualCount = parseInt(document.getElementById('dollarCount').value, 10) || 0;
                     console.log('Dollar count:', manualCount, 'Charge value:', charge.value, 'Result:', manualCount * charge.value);
-                    return total + (manualCount * charge.value);
+                    return total + manualCount 
                 }
                 if (charge.type === 'approval') {
                     return total + (totalProducts * 5);
@@ -286,6 +293,8 @@
             totalRevenue = 0;
             totalProducts = 0;
             fileCount = 0;
+            //unique student
+            //uniqueEmails = new Set();
 
             for (const file of files) {
                 if (file.type.includes('sheet') || file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
@@ -359,7 +368,8 @@
             const extractedData = [];
             const groupedData = {};
             let productValue = '';
-
+            //unique student
+           // const emailsInFile = new Set();
             // Debug logging
             console.log('Starting data extraction for:', fileName);
             console.log('Raw data length:', jsonData.length);
@@ -498,6 +508,12 @@
 
                 groupedData[key].count += 1;
                 groupedData[key].totalAmount += amount;
+                // Add email to unique sets
+                //unique student
+                // if (email) {
+                //     emailsInFile.add(email);
+                //     uniqueEmails.add(email);
+                // }
             });
 
             // Convert grouped data to final format
@@ -574,6 +590,7 @@
         function updateSummary() {
             document.getElementById('totalFiles').textContent = fileCount;
             document.getElementById('totalProducts').textContent = totalProducts;
+            //unique student document.getElementById('uniqueStudents').textContent = uniqueEmails.size;
             document.getElementById('totalRevenue').textContent = `${totalRevenue}`;
         }
 
@@ -680,7 +697,7 @@
                     chargeAmount = manualUserCount * charge.value;
                 } else if (charge.type === 'serverBil') {
                     const manualCount = parseInt(document.getElementById('dollarCount').value, 10) || 0;
-                    chargeAmount = manualCount * charge.value;
+                    chargeAmount = manualCount;
                 }
                 else if (charge.type === 'approval') {
                     chargeAmount = totalProducts * 5;
@@ -926,7 +943,7 @@
                     chargeAmount = manualUserCount * charge.value;
                 } else if (charge.type === 'serverBil') {
                     const manualCount = parseInt(document.getElementById('dollarCount').value, 10) || 0;
-                    chargeAmount = manualCount * charge.value;
+                    chargeAmount = manualCount;
                 } else if (charge.type === 'approval') {
                     chargeAmount = totalProducts * 5;
                 } else if (charge.type === 'webapp') {
