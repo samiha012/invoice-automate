@@ -223,7 +223,7 @@
                 if (charge.type === 'webapp') {
                     return total + charge.value; // Fixed charge for web app
                 }
-                return total + (revenue * charge.value / 100);
+                return total + Math.round(revenue * charge.value / 100);
             }, 0);
         }
 
@@ -628,9 +628,9 @@
 
             const selectedCharges = getSelectedCharges();
             const chargesTotal = calculateChargesTotal(selectedCharges, totalRevenue, totalProducts);
-            const finalTotal = Math.ceil(totalRevenue - chargesTotal);
+            const finalTotal = Math.round(totalRevenue - chargesTotal);
             const isQuarterShare = document.getElementById('quarterShare').checked;
-            const quarterShareAmount = isQuarterShare ? Math.ceil(finalTotal / 4) : 0;
+            const quarterShareAmount = isQuarterShare ? Math.round(finalTotal / 4) : 0;
 
             const formatProductName = (item) => {
                 // If cycle is empty or just a space, return product name without the cycle
@@ -740,7 +740,7 @@
             const dateRange = formatDateRange(salesData[0]?.fileName || '');
             const selectedCharges = getSelectedCharges();
             const chargesTotal = calculateChargesTotal(selectedCharges, totalRevenue, totalProducts);
-            const finalTotal = Math.ceil(totalRevenue - chargesTotal);
+            const finalTotal = Math.round(totalRevenue - chargesTotal);
 
             const pageWidth = pdf.internal.pageSize.getWidth();
 
@@ -949,11 +949,11 @@
                 } else if (charge.type === 'webapp') {
                     chargeAmount = 100000;
                 } else {
-                    chargeAmount = totalRevenue * charge.value / 100;
+                    chargeAmount = Math.round(totalRevenue * charge.value / 100);
                 }
 
                 pdf.text(`${charge.label}:`, totalsX, yPos);
-                pdf.text(`-${Math.ceil(chargeAmount).toLocaleString()} Tk`, valuesX, yPos, { align: 'center' });
+                pdf.text(`-${chargeAmount.toLocaleString()} Tk`, valuesX, yPos, { align: 'center' });
                 yPos += 7;
             });
 
@@ -980,7 +980,7 @@
             const isQuarterShare = document.getElementById('quarterShare').checked;
             if (isQuarterShare) {
                 yPos += 15;
-                const quarterShareAmount = Math.ceil(finalTotal / 4);
+                const quarterShareAmount = Math.round(finalTotal / 4);
 
                 // Add a dashed line
                 pdf.setLineDashPattern([3, 3], 0);
