@@ -109,9 +109,31 @@
                         <label>
                             <input type="checkbox" id="serverCharge" class="charge-checkbox" value="1">
                             <!-- <span class="charge-label">Server Bill (till date)</span> -->
-                            <span class="charge-label">Server Bill </span>
+                            <span class="charge-label">Server Bill (oct 24 - jan 25)</span>
                             <div class="charge-description">Enter the number of dollars manually:</div>
                             <input type="number" id="dollarCount" placeholder="Enter count"
+                                style="width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px;"
+                                min="1">
+                        </label>
+                    </div>
+                    <div class="charge-item" data-charge="teachmintBil">
+                        <label>
+                            <input type="checkbox" id="teachmintCharge" class="charge-checkbox" value="1">
+                            <!-- <span class="charge-label">Server Bill (till date)</span> -->
+                            <span class="charge-label">Teachmint Bill </span>
+                            <div class="charge-description">Enter the amount manually:</div>
+                            <input type="number" id="teachmintCount" placeholder="Enter count"
+                                style="width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px;"
+                                min="1">
+                        </label>
+                    </div>
+                    <div class="charge-item" data-charge="bunnyBil">
+                        <label>
+                            <input type="checkbox" id="bunnyCharge" class="charge-checkbox" value="1">
+                            <!-- <span class="charge-label">Server Bill (till date)</span> -->
+                            <span class="charge-label">Bunny Bill </span>
+                            <div class="charge-description">Enter the amount manually:</div>
+                            <input type="number" id="bunnyCount" placeholder="Enter count"
                                 style="width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px;"
                                 min="1">
                         </label>
@@ -216,7 +238,15 @@
                 if (charge.type === 'serverBil') {
                     const manualCount = parseInt(document.getElementById('dollarCount').value, 10) || 0;
                     console.log('Dollar count:', manualCount, 'Charge value:', charge.value, 'Result:', manualCount * charge.value);
-                    return total + manualCount 
+                    return total + (manualCount * charge.value);
+                }
+                if (charge.type === 'teachmintBil') {
+                    const manualCount = parseInt(document.getElementById('teachmintCount').value, 10) || 0;
+                    return total + manualCount;
+                }
+                if (charge.type === 'bunnyBil') {
+                    const manualCount = parseInt(document.getElementById('bunnyCount').value, 10) || 0;
+                    return total + manualCount;
                 }
                 if (charge.type === 'approval') {
                     return total + (totalProducts * 5);
@@ -699,6 +729,12 @@
                 } else if (charge.type === 'serverBil') {
                     const manualCount = parseInt(document.getElementById('dollarCount').value, 10) || 0;
                     chargeAmount = manualCount;
+                } else if (charge.type === 'teachmintBil') {
+                    const manualCount = parseInt(document.getElementById('teachmintCount').value, 10) || 0;
+                    chargeAmount = manualCount;
+                } else if (charge.type === 'bunnyBil') {
+                    const manualCount = parseInt(document.getElementById('bunnyCount').value, 10) || 0;
+                    chargeAmount = manualCount;
                 }
                 else if (charge.type === 'approval') {
                     chargeAmount = totalProducts * 5;
@@ -945,7 +981,14 @@
                 } else if (charge.type === 'serverBil') {
                     const manualCount = parseInt(document.getElementById('dollarCount').value, 10) || 0;
                     chargeAmount = manualCount;
-                } else if (charge.type === 'approval') {
+                } else if (charge.type === 'teachmintBil') {
+                    const manualCount = parseInt(document.getElementById('teachmintCount').value, 10) || 0;
+                    chargeAmount = manualCount;
+                } else if (charge.type === 'bunnyBil') {
+                    const manualCount = parseInt(document.getElementById('bunnyCount').value, 10) || 0;
+                    chargeAmount = manualCount;
+                }
+                 else if (charge.type === 'approval') {
                     chargeAmount = totalProducts * 5;
                 } else if (charge.type === 'webapp') {
                     chargeAmount = 100000;
