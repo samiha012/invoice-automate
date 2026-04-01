@@ -45,10 +45,10 @@
                             <div class="summary-label">Files Processed</div>
                         </div>
                         <!-- unique student -->
-                        <!-- <div class="summary-item">
+                         <div class="summary-item">
                             <div class="summary-value" id="uniqueStudents">0</div>
                             <div class="summary-label">Unique Students</div>
-                        </div> -->
+                        </div> 
                         <div class="summary-item">
                             <div class="summary-value" id="totalProducts">0</div>
                             <div class="summary-label">Total Products Sold</div>
@@ -215,7 +215,7 @@
         let totalProducts = 0;
         let fileCount = 0;
         //unique student
-        //let uniqueEmails = new Set();
+        let uniqueEmails = new Set();
 
         // Common utility functions
         function getSelectedCharges() {
@@ -325,7 +325,7 @@
             totalProducts = 0;
             fileCount = 0;
             //unique student
-            //uniqueEmails = new Set();
+            uniqueEmails = new Set();
 
             for (const file of files) {
                 if (file.type.includes('sheet') || file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
@@ -400,7 +400,7 @@
             const groupedData = {};
             let productValue = '';
             //unique student
-           // const emailsInFile = new Set();
+            const emailsInFile = new Set();
             // Debug logging
             console.log('Starting data extraction for:', fileName);
             console.log('Raw data length:', jsonData.length);
@@ -541,10 +541,10 @@
                 groupedData[key].totalAmount += amount;
                 // Add email to unique sets
                 //unique student
-                // if (email) {
-                //     emailsInFile.add(email);
-                //     uniqueEmails.add(email);
-                // }
+                if (email) {
+                    emailsInFile.add(email);
+                    uniqueEmails.add(email);
+                }
             });
 
             // Convert grouped data to final format
@@ -621,7 +621,8 @@
         function updateSummary() {
             document.getElementById('totalFiles').textContent = fileCount;
             document.getElementById('totalProducts').textContent = totalProducts;
-            //unique student document.getElementById('uniqueStudents').textContent = uniqueEmails.size;
+            //unique student
+            document.getElementById('uniqueStudents').textContent = uniqueEmails.size;
             document.getElementById('totalRevenue').textContent = `${totalRevenue}`;
         }
 
