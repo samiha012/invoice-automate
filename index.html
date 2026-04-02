@@ -121,6 +121,38 @@
                             <div class="charge-description">One-time web application development charge</div>
                         </label>
                     </div>
+                    <div class="charge-item" data-charge="streamingBil">
+                        <label>
+                            <input type="checkbox" id="streamingCharge" class="charge-checkbox" value="1">
+                            <span class="charge-label">Streaming Bill</span>
+                            <div class="charge-description">Enter streaming bill details:</div>
+                            <div style="padding: 10px 0;">
+                                <div style="margin-bottom: 10px;">
+                                    <label style="font-size: 0.9em; font-weight: 500; display: block; margin-bottom: 5px;">Total Amount (Tk):</label>
+                                    <input type="number" id="streamingAmount" placeholder="e.g., 5000"
+                                        style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;"
+                                        min="0">
+                                </div>
+                                <div style="margin-bottom: 10px;">
+                                    <label style="font-size: 0.9em; font-weight: 500; display: block; margin-bottom: 5px;">Total Bandwidth Used (TB):</label>
+                                    <input type="number" id="streamingBandwidth" placeholder="e.g., 400"
+                                        style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;"
+                                        min="0" step="0.01">
+                                </div>
+                                <div style="margin-bottom: 10px;">
+                                    <label style="font-size: 0.9em; font-weight: 500; display: block; margin-bottom: 5px;">Total Streaming Time (HH:MM):</label>
+                                    <input type="text" id="streamingTime" placeholder="e.g., 14:34"
+                                        style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                                </div>
+                                <div style="margin-bottom: 10px;">
+                                    <label style="font-size: 0.9em; font-weight: 500; display: block; margin-bottom: 5px;">Total Participants:</label>
+                                    <input type="number" id="streamingParticipants" placeholder="e.g., 2400"
+                                        style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;"
+                                        min="0">
+                                </div>
+                            </div>
+                        </label>
+                    </div>
                 </div>
             </div>
 
@@ -191,6 +223,10 @@
                 if (charge.type === 'serverBil') {
                     // Fixed hosting bill: 7 USD = 945 Tk
                     return total + 945;
+                }
+                if (charge.type === 'streamingBil') {
+                    const streamingAmount = parseInt(document.getElementById('streamingAmount').value, 10) || 0;
+                    return total + streamingAmount;
                 }
                 if (charge.type === 'approval') {
                     return total + (totalProducts * 5);
@@ -663,6 +699,9 @@
                 } else if (charge.type === 'serverBil') {
                     // Fixed hosting bill: 7 USD = 945 Tk
                     chargeAmount = 945;
+                } else if (charge.type === 'streamingBil') {
+                    const streamingAmount = parseInt(document.getElementById('streamingAmount').value, 10) || 0;
+                    chargeAmount = streamingAmount;
                 }
                 else if (charge.type === 'approval') {
                     chargeAmount = totalProducts * 5;
@@ -697,6 +736,34 @@
                             </div>
                             <div class="total-row" style="padding-left: 20px; font-weight: bold; color: #2980b9; margin-top: 4px;">
                                 <span>Subtotal:</span>
+                                <span>৳${chargeAmount.toLocaleString()}</span>
+                            </div>
+                        `;
+                }
+                
+                // Show streaming bill breakdown if applicable
+                if (charge.type === 'streamingBil') {
+                    const bandwidth = document.getElementById('streamingBandwidth').value || '0';
+                    const streamingTime = document.getElementById('streamingTime').value || 'N/A';
+                    const participants = document.getElementById('streamingParticipants').value || '0';
+                    return `
+                            <div class="total-row" style="padding: 8px 0; border-bottom: 1px solid #eee;">
+                                <span style="font-weight: bold; color: #2980b9;">${charge.label}</span>
+                            </div>
+                            <div class="total-row" style="padding-left: 20px; font-size: 0.9em; color: #666;">
+                                <span>Total Bandwidth Used:</span>
+                                <span>${bandwidth} TB</span>
+                            </div>
+                            <div class="total-row" style="padding-left: 20px; font-size: 0.9em; color: #666;">
+                                <span>Total Streaming Time:</span>
+                                <span>${streamingTime}</span>
+                            </div>
+                            <div class="total-row" style="padding-left: 20px; font-size: 0.9em; color: #666; border-top: 1px solid #ddd; padding-top: 6px; margin-top: 4px;">
+                                <span>Total Participants:</span>
+                                <span>${participants}</span>
+                            </div>
+                            <div class="total-row" style="padding-left: 20px; font-weight: bold; color: #2980b9; margin-top: 4px;">
+                                <span>Total Amount:</span>
                                 <span>৳${chargeAmount.toLocaleString()}</span>
                             </div>
                         `;
@@ -906,6 +973,12 @@
             pdf.setFont(undefined, 'normal');
             yPos += 12;  // Add extra space after the total row
 
+            // Check if we need a new page for the totals section
+            if (yPos > 150) {
+                pdf.addPage();
+                yPos = 30;
+            }
+
             // Totals section
             yPos += 10;
             const totalsX = 90;
@@ -926,6 +999,12 @@
 
             // Additional charges
             selectedCharges.forEach(charge => {
+                // Check if we need a new page for this charge
+                if (yPos > 220) {
+                    pdf.addPage();
+                    yPos = 30;
+                }
+
                 let chargeAmount;
                 if (charge.type === 'exam') {
                     const manualUserCount = parseInt(document.getElementById('examUserCount').value, 10) || 0;
@@ -933,8 +1012,8 @@
                 } else if (charge.type === 'serverBil') {
                     // Fixed hosting bill: 7 USD = 945 Tk
                     chargeAmount = 945;
-                } else if (charge.type === 'approval') {
-                    chargeAmount = totalProducts * 5;
+                } else if (charge.type === 'streamingBil') {
+                    chargeAmount = parseInt(document.getElementById('streamingAmount').value, 10) || 0;
                 } else if (charge.type === 'webapp') {
                     chargeAmount = 100000;
                 } else {
@@ -971,6 +1050,35 @@
                     pdf.text(`  Subtotal:`, totalsX, yPos);
                     pdf.text(`-${chargeAmount.toLocaleString()} Tk`, valuesX, yPos, { align: 'center' });
                     yPos += 8;
+                } else if (charge.type === 'streamingBil') {
+                    // Display streaming bill breakdown
+                    const bandwidth = document.getElementById('streamingBandwidth').value || '0';
+                    const streamingTime = document.getElementById('streamingTime').value || 'N/A';
+                    const participants = document.getElementById('streamingParticipants').value || '0';
+                    
+                    pdf.setFont(undefined, 'bold');
+                    pdf.text(`${charge.label}:`, totalsX, yPos);
+                    yPos += 6;
+                    
+                    pdf.setFont(undefined, 'normal');
+                    pdf.setFontSize(9);
+                    pdf.text(`  Total Bandwidth Used:`, totalsX, yPos);
+                    pdf.text(`${bandwidth} TB`, valuesX, yPos, { align: 'center' });
+                    yPos += 5;
+                    
+                    pdf.text(`  Total Streaming Time:`, totalsX, yPos);
+                    pdf.text(`${streamingTime}`, valuesX, yPos, { align: 'center' });
+                    yPos += 5;
+                    
+                    pdf.text(`  Total Participants:`, totalsX, yPos);
+                    pdf.text(`${participants}`, valuesX, yPos, { align: 'center' });
+                    yPos += 6;
+                    
+                    pdf.setFont(undefined, 'bold');
+                    pdf.setFontSize(10);
+                    pdf.text(`  Total Amount:`, totalsX, yPos);
+                    pdf.text(`-${chargeAmount.toLocaleString()} Tk`, valuesX, yPos, { align: 'center' });
+                    yPos += 8;
                 } else {
                     // Check if charge label is long and needs wrapping
                     const chargeLabel = `${charge.label}:`;
@@ -995,6 +1103,12 @@
                     }
                 }
             });
+
+            // Check if we need a new page for the final total
+            if (yPos > 260) {
+                pdf.addPage();
+                yPos = 30;
+            }
 
             // Total line
             pdf.setDrawColor(...primaryColor);
