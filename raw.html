@@ -108,12 +108,8 @@
                     <div class="charge-item" data-charge="serverBil">
                         <label>
                             <input type="checkbox" id="serverCharge" class="charge-checkbox" value="1">
-                            <!-- <span class="charge-label">Server Bill (till date)</span> -->
-                            <span class="charge-label">Hosting Bill</span>
-                            <div class="charge-description">Enter the number of dollars manually:</div>
-                            <input type="number" id="dollarCount" placeholder="Enter count"
-                                style="width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px;"
-                                min="1">
+                            <span class="charge-label">Hosting Bill (7 USD = 945 Tk)</span>
+                            <div class="charge-description">Fixed hosting charges: $7 USD converted to 945 Tk</div>
                         </label>
                     </div>
                     <div class="charge-item" data-charge="teachmintBil">
@@ -236,9 +232,8 @@
                     return total + (manualUserCount * charge.value);
                 }
                 if (charge.type === 'serverBil') {
-                    const manualCount = parseInt(document.getElementById('dollarCount').value, 10) || 0;
-                    console.log('Dollar count:', manualCount, 'Charge value:', charge.value, 'Result:', manualCount * charge.value);
-                    return total + (manualCount * charge.value);
+                    // Fixed hosting bill: 7 USD = 945 Tk
+                    return total + 945;
                 }
                 if (charge.type === 'teachmintBil') {
                     const manualCount = parseInt(document.getElementById('teachmintCount').value, 10) || 0;
@@ -728,8 +723,8 @@
                     const manualUserCount = parseInt(document.getElementById('examUserCount').value, 10) || 0;
                     chargeAmount = manualUserCount * charge.value;
                 } else if (charge.type === 'serverBil') {
-                    const manualCount = parseInt(document.getElementById('dollarCount').value, 10) || 0;
-                    chargeAmount = manualCount;
+                    // Fixed hosting bill: 7 USD = 945 Tk
+                    chargeAmount = 945;
                 } else if (charge.type === 'teachmintBil') {
                     const manualCount = parseInt(document.getElementById('teachmintCount').value, 10) || 0;
                     chargeAmount = manualCount;
@@ -745,6 +740,36 @@
                 else {
                     chargeAmount = totalRevenue * charge.value / 100;
                 }
+                
+                // Show hosting bill breakdown if applicable
+                if (charge.type === 'serverBil') {
+                    return `
+                            <div class="total-row" style="padding: 8px 0; border-bottom: 1px solid #eee;">
+                                <span style="font-weight: bold; color: #2980b9;">${charge.label}</span>
+                            </div>
+                            <div class="total-row" style="padding-left: 20px; font-size: 0.9em; color: #666;">
+                                <span>Frontend:</span>
+                                <span>$2</span>
+                            </div>
+                            <div class="total-row" style="padding-left: 20px; font-size: 0.9em; color: #666;">
+                                <span>Backend:</span>
+                                <span>$2</span>
+                            </div>
+                            <div class="total-row" style="padding-left: 20px; font-size: 0.9em; color: #666;">
+                                <span>Database:</span>
+                                <span>$2</span>
+                            </div>
+                            <div class="total-row" style="padding-left: 20px; font-size: 0.9em; color: #666; border-top: 1px solid #ddd; padding-top: 6px; margin-top: 4px;">
+                                <span>Service:</span>
+                                <span>$1</span>
+                            </div>
+                            <div class="total-row" style="padding-left: 20px; font-weight: bold; color: #2980b9; margin-top: 4px;">
+                                <span>Subtotal:</span>
+                                <span>৳${chargeAmount.toLocaleString()}</span>
+                            </div>
+                        `;
+                }
+                
                 return `
                             <div class="total-row">
                                 <span>${charge.label}:</span>
@@ -980,8 +1005,8 @@
                     const manualUserCount = parseInt(document.getElementById('examUserCount').value, 10) || 0;
                     chargeAmount = manualUserCount * charge.value;
                 } else if (charge.type === 'serverBil') {
-                    const manualCount = parseInt(document.getElementById('dollarCount').value, 10) || 0;
-                    chargeAmount = manualCount;
+                    // Fixed hosting bill: 7 USD = 945 Tk
+                    chargeAmount = 945;
                 } else if (charge.type === 'teachmintBil') {
                     const manualCount = parseInt(document.getElementById('teachmintCount').value, 10) || 0;
                     chargeAmount = manualCount;
@@ -997,9 +1022,41 @@
                     chargeAmount = Math.round(totalRevenue * charge.value / 100);
                 }
 
-                pdf.text(`${charge.label}:`, totalsX, yPos);
-                pdf.text(`-${chargeAmount.toLocaleString()} Tk`, valuesX, yPos, { align: 'center' });
-                yPos += 7;
+                // Show hosting bill breakdown if applicable
+                if (charge.type === 'serverBil') {
+                    // Display breakdown
+                    pdf.setFont(undefined, 'bold');
+                    pdf.text(`${charge.label}:`, totalsX, yPos);
+                    yPos += 6;
+                    
+                    pdf.setFont(undefined, 'normal');
+                    pdf.setFontSize(9);
+                    pdf.text(`  Frontend:`, totalsX, yPos);
+                    pdf.text(`$2`, valuesX, yPos, { align: 'center' });
+                    yPos += 5;
+                    
+                    pdf.text(`  Backend:`, totalsX, yPos);
+                    pdf.text(`$2`, valuesX, yPos, { align: 'center' });
+                    yPos += 5;
+                    
+                    pdf.text(`  Database:`, totalsX, yPos);
+                    pdf.text(`$2`, valuesX, yPos, { align: 'center' });
+                    yPos += 5;
+                    
+                    pdf.text(`  Service:`, totalsX, yPos);
+                    pdf.text(`$1`, valuesX, yPos, { align: 'center' });
+                    yPos += 6;
+                    
+                    pdf.setFont(undefined, 'bold');
+                    pdf.setFontSize(10);
+                    pdf.text(`  Subtotal:`, totalsX, yPos);
+                    pdf.text(`-${chargeAmount.toLocaleString()} Tk`, valuesX, yPos, { align: 'center' });
+                    yPos += 8;
+                } else {
+                    pdf.text(`${charge.label}:`, totalsX, yPos);
+                    pdf.text(`-${chargeAmount.toLocaleString()} Tk`, valuesX, yPos, { align: 'center' });
+                    yPos += 7;
+                }
             });
 
             // Total line
