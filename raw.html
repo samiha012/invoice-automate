@@ -1077,11 +1077,9 @@
             pdf.setFont(undefined, 'normal');
             yPos += 12;  // Add extra space after the total row
 
-            // Check if we need a new page for the totals section
-            if (yPos > 150) {
-                pdf.addPage();
-                yPos = 30;
-            }
+            // Start totals section on a new page
+            pdf.addPage();
+            yPos = 30;
 
             // Totals section
             yPos += 10;
@@ -1121,6 +1119,8 @@
                     chargeAmount = manualCount;
                 } else if (charge.type === 'streamingBil') {
                     chargeAmount = parseInt(document.getElementById('streamingAmount').value, 10) || 0;
+                } else if (charge.type === 'recordedClassBil') {
+                    chargeAmount = parseInt(document.getElementById('recordedClassAmount').value, 10) || 0;
                 } else if (charge.type === 'approval') {
                     chargeAmount = totalProducts * 5;
                 } else if (charge.type === 'webapp') {
