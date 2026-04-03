@@ -1190,6 +1190,8 @@
                 } else if (charge.type === 'recordedClassBil') {
                     pdf.setFont(undefined, 'bold');
                     pdf.text(`${charge.label}:`, totalsX, yPos);
+                    yPos += 6;
+
                     pdf.setFont(undefined, 'bold');
                     pdf.setFontSize(10);
                     pdf.text(`  Total Amount:`, totalsX, yPos);
