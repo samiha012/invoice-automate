@@ -736,7 +736,7 @@
                     const recordedClassAmount = parseInt(document.getElementById('recordedClassAmount').value, 10) || 0;
                     chargeAmount = recordedClassAmount;
                 } else if (charge.type === 'approval') {
-                    chargeAmount = totalProducts * 5;
+                    chargeAmount = totalProducts * 5;  // Fixed: always 5 Tk per product, not a percentage
                 } else if (charge.type === 'webapp') {
                     chargeAmount = 100000;
                 } else {
@@ -799,7 +799,8 @@
                             </div>
                         `;
                 }
-                
+
+
                 // Show recorded class bill breakdown if applicable
                 if (charge.type === 'recordedClassBil') {
                     return `
@@ -1060,6 +1061,8 @@
                     chargeAmount = parseInt(document.getElementById('streamingAmount').value, 10) || 0;
                 } else if (charge.type === 'recordedClassBil') {
                     chargeAmount = parseInt(document.getElementById('recordedClassAmount').value, 10) || 0;
+                } else if (charge.type === 'approval') {
+                    chargeAmount = totalProducts * 5;  // Fixed: always 5 Tk per product, not a percentage
                 } else if (charge.type === 'webapp') {
                     chargeAmount = 100000;
                 } else {
@@ -1135,6 +1138,7 @@
                     pdf.text(`  Total Amount:`, totalsX, yPos);
                     pdf.text(`-${chargeAmount.toLocaleString()} Tk`, valuesX, yPos, { align: 'center' });
                     yPos += 8;
+
                 } else {
                     // Check if charge label is long and needs wrapping
                     const chargeLabel = `${charge.label}:`;
