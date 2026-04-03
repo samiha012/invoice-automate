@@ -165,12 +165,6 @@
                                         style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;"
                                         min="0">
                                 </div>
-                                <div style="margin-bottom: 10px;">
-                                    <label style="font-size: 0.9em; font-weight: 500; display: block; margin-bottom: 5px;">Hours Watched:</label>
-                                    <input type="number" id="recordedClassHours" placeholder="e.g., 120"
-                                        style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;"
-                                        min="0" step="0.5">
-                                </div>
                             </div>
                         </label>
                     </div>
@@ -652,7 +646,7 @@
         });
         
         // Add listeners for input fields that affect charges
-        const chargeInputFields = ['examUserCount', 'streamingAmount', 'streamingBandwidth', 'streamingTime', 'streamingParticipants', 'recordedClassAmount', 'recordedClassHours'];
+        const chargeInputFields = ['examUserCount', 'streamingAmount', 'streamingBandwidth', 'streamingTime', 'streamingParticipants', 'recordedClassAmount'];
         chargeInputFields.forEach(fieldId => {
             const field = document.getElementById(fieldId);
             if (field) {
@@ -808,14 +802,9 @@
                 
                 // Show recorded class bill breakdown if applicable
                 if (charge.type === 'recordedClassBil') {
-                    const hoursWatched = document.getElementById('recordedClassHours').value || '0';
                     return `
                             <div class="total-row" style="padding: 8px 0; border-bottom: 1px solid #eee;">
                                 <span style="font-weight: bold; color: #2980b9;">${charge.label}</span>
-                            </div>
-                            <div class="total-row" style="padding-left: 20px; font-size: 0.9em; color: #666; border-top: 1px solid #ddd; padding-top: 6px; margin-top: 4px;">
-                                <span>Total Hours Watched:</span>
-                                <span>${hoursWatched} hours</span>
                             </div>
                             <div class="total-row" style="padding-left: 20px; font-weight: bold; color: #2980b9; margin-top: 4px;">
                                 <span>Total Amount:</span>
@@ -1137,19 +1126,8 @@
                     pdf.text(`-${chargeAmount.toLocaleString()} Tk`, valuesX, yPos, { align: 'center' });
                     yPos += 8;
                 } else if (charge.type === 'recordedClassBil') {
-                    // Display recorded class bill breakdown
-                    const hoursWatched = document.getElementById('recordedClassHours').value || '0';
-                    
                     pdf.setFont(undefined, 'bold');
                     pdf.text(`${charge.label}:`, totalsX, yPos);
-                    yPos += 6;
-                    
-                    pdf.setFont(undefined, 'normal');
-                    pdf.setFontSize(9);
-                    pdf.text(`  Total Hours Watched:`, totalsX, yPos);
-                    pdf.text(`${hoursWatched} hours`, valuesX, yPos, { align: 'center' });
-                    yPos += 6;
-                    
                     pdf.setFont(undefined, 'bold');
                     pdf.setFontSize(10);
                     pdf.text(`  Total Amount:`, totalsX, yPos);
